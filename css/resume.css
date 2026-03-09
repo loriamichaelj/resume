@@ -348,17 +348,13 @@ p {
 }
 
 .experience .experience-card .card-title .highlight {
-  opacity: 0.7;
-  font-weight: 400;
-}
-
-.experience .experience-card .card-years {
-  color: var(--blue);
-  font-weight: 500;
-  font-size: 18px;
-  line-height: 150%;
-  margin-bottom: 24px;
   opacity: 1;
+  font-weight: 500;
+  font-size: 16px;
+  color: var(--blue);
+  line-height: 150%;
+  display: inline-block;
+  margin-bottom: 24px;
 }
 
 .experience .experience-card .card-list .card-list-item {
