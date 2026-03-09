@@ -116,10 +116,10 @@ p {
   border: 2px solid var(--white);
 }
 
-.list-items-circle li a .fab {
-  width: 80px;
-  height: 80px;
-  font-size: 30px;
+.list-items-circle li a .fa-brands {
+  width: 96px;
+  height: 96px;
+  font-size: 2.25rem; /* 36px – proportionate to site scale */
 
   display: flex;
   justify-content: center;
@@ -129,7 +129,7 @@ p {
   transition: 250ms ease all;
 }
 
-.list-items-circle li a:hover .fab {
+.list-items-circle li a:hover .fa-brands {
   color: var(--black);
 }
 
@@ -326,27 +326,6 @@ p {
 
 /* === EXPERIENCE === */
 
-.experience-description {
-  max-width: 900px;
-  margin-bottom: 125px;
-
-  font-weight: 400;
-  font-size: var(--font-32);
-  line-height: 150%;
-
-  opacity: 1;
-  position: relative;
-}
-
-.experience-description img {
-  position: absolute;
-  top: 50%;
-  right: -200px;
-  transform: translate(-50%, -50%);
-
-  pointer-events: none;
-}
-
 .experience h2 {
   border-left: 2px solid var(--white);
   padding-left: 24px;
@@ -415,8 +394,10 @@ p {
   transition: 500ms ease all;
 }
 
-.skills .skill-card .fab {
-  font-size: 80px;
+.skills .skill-card .fa-brands,
+.skills .skill-card .fa-solid,
+.skills .skill-card .bx {
+  font-size: 5rem; /* 80px – fills card proportionately */
   opacity: 0.7;
   transition: 500ms ease all;
 }
@@ -425,23 +406,10 @@ p {
   background-blend-mode: normal;
 }
 
-.skills .skill-card:hover .fab {
+.skills .skill-card:hover .fa-brands,
+.skills .skill-card:hover .fa-solid,
+.skills .skill-card:hover .bx {
   opacity: 1;
-}
-
-.skills .skill-list {
-  list-style: none;
-  flex-wrap: wrap;
-}
-
-.skills .skill-list li {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.skills .skill-list li img {
-  margin: 10px;
 }
 
 /* === CONTACT === */
@@ -496,6 +464,12 @@ p {
   .skills .skill-card {
     width: 125px;
     height: 125px;
+  }
+
+  .skills .skill-card .fa-brands,
+  .skills .skill-card .fa-solid,
+  .skills .skill-card .bx {
+    font-size: 3.5rem; /* ~56px – proportionate to smaller cards */
   }
 }
 
