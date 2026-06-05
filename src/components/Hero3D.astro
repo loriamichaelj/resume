@@ -1,0 +1,228 @@
+---
+// Interactive Three.js hero object: a gradient icosahedron with a wireframe
+// shell and an orbiting particle field, in the site's brand colors.
+// Three.js is lazy-loaded (dynamic import) only when the hero scrolls into
+// view and only on WebGL-capable devices, keeping it out of the initial bundle.
+---
+
+<div
+  id="hero3d"
+  class="relative mx-auto h-72 w-72 sm:h-80 sm:w-80 lg:h-[22rem] lg:w-[22rem]"
+>
+  <!-- Soft brand glow behind the object (also the graceful fallback) -->
+  <div
+    class="pointer-events-none absolute inset-4 animate-float rounded-full bg-brand-gradient opacity-40 blur-3xl"
+    aria-hidden="true"
+  >
+  </div>
+  <canvas id="hero3d-canvas" class="relative block h-full w-full" aria-hidden="true"
+  ></canvas>
+</div>
+
+<script>
+  type ThreeNS = typeof import("three");
+
+  const canvas = document.getElementById("hero3d-canvas") as HTMLCanvasElement | null;
+  const container = document.getElementById("hero3d");
+
+  function webglAvailable(): boolean {
+    try {
+      const c = document.createElement("canvas");
+      return !!(
+        window.WebGLRenderingContext &&
+        (c.getContext("webgl") || c.getContext("experimental-webgl"))
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  if (canvas && container && webglAvailable()) {
+    // Lazy-load Three.js + initialise the scene only when the hero is near view.
+    let loaded = false;
+    const loader = new IntersectionObserver(
+      (entries) => {
+        if (loaded || !entries.some((e) => e.isIntersecting)) return;
+        loaded = true;
+        loader.disconnect();
+        import("three")
+          .then((THREE) => initScene(THREE, canvas, container))
+          .catch(() => {
+            /* Network/parse failure: leave the CSS glow as the fallback. */
+          });
+      },
+      { rootMargin: "300px" },
+    );
+    loader.observe(container);
+  }
+
+  function initScene(THREE: ThreeNS, canvas: HTMLCanvasElement, container: HTMLElement) {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    camera.position.set(0, 0, 4.2);
+
+    const group = new THREE.Group();
+    scene.add(group);
+
+    // --- Gradient + fresnel shader (brand colors) ---
+    const uniforms = {
+      uViolet: { value: new THREE.Color("#553deb") },
+      uRose: { value: new THREE.Color("#f367a5") },
+      uFlame: { value: new THREE.Color("#f4492f") },
+    };
+
+    const material = new THREE.ShaderMaterial({
+      uniforms,
+      transparent: true,
+      vertexShader: /* glsl */ `
+        varying vec3 vNormalW;
+        varying vec3 vViewDir;
+        varying float vY;
+        void main() {
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vNormalW = normalize(mat3(modelMatrix) * normal);
+          vViewDir = normalize(cameraPosition - worldPos.xyz);
+          vY = normal.y;
+          gl_Position = projectionMatrix * viewMatrix * worldPos;
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        uniform vec3 uViolet;
+        uniform vec3 uRose;
+        uniform vec3 uFlame;
+        varying vec3 vNormalW;
+        varying vec3 vViewDir;
+        varying float vY;
+        void main() {
+          float t = clamp(vY * 0.5 + 0.5, 0.0, 1.0);
+          vec3 base = mix(uViolet, uRose, smoothstep(0.0, 0.6, t));
+          base = mix(base, uFlame, smoothstep(0.55, 1.0, t));
+          float fres = pow(1.0 - max(dot(vViewDir, vNormalW), 0.0), 2.5);
+          vec3 color = base + fres * 0.75;
+          gl_FragColor = vec4(color, 0.92);
+        }
+      `,
+    });
+
+    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(1.15, 1), material);
+    group.add(core);
+
+    // --- Wireframe shell ---
+    const shell = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(1.17, 1),
+      new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.13,
+      }),
+    );
+    group.add(shell);
+
+    // --- Orbiting particle field ---
+    const COUNT = 150;
+    const positions = new Float32Array(COUNT * 3);
+    for (let i = 0; i < COUNT; i++) {
+      const r = 1.7 + Math.random() * 0.95;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i * 3 + 2] = r * Math.cos(phi);
+    }
+    const pGeo = new THREE.BufferGeometry();
+    pGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const points = new THREE.Points(
+      pGeo,
+      new THREE.PointsMaterial({
+        color: 0xffc8e6,
+        size: 0.035,
+        transparent: true,
+        opacity: 0.85,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
+    );
+    group.add(points);
+
+    group.rotation.set(0.32, 0.4, 0);
+
+    // --- Sizing ---
+    function resize() {
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      if (w === 0 || h === 0) return;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    resize();
+    new ResizeObserver(resize).observe(container);
+
+    // --- Pointer parallax (camera offset) ---
+    let targetX = 0;
+    let targetY = 0;
+    window.addEventListener(
+      "pointermove",
+      (e) => {
+        targetX = e.clientX / window.innerWidth - 0.5;
+        targetY = e.clientY / window.innerHeight - 0.5;
+      },
+      { passive: true },
+    );
+
+    let raf = 0;
+    let running = false;
+    const startTime = performance.now();
+
+    function frame() {
+      const t = (performance.now() - startTime) / 1000;
+      group.rotation.y += 0.003;
+      group.rotation.x = 0.32 + Math.sin(t * 0.5) * 0.05;
+      group.position.y = Math.sin(t * 0.8) * 0.06;
+      points.rotation.y -= 0.0013;
+
+      camera.position.x += (targetX * 0.8 - camera.position.x) * 0.04;
+      camera.position.y += (-targetY * 0.5 - camera.position.y) * 0.04;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+      raf = requestAnimationFrame(frame);
+    }
+
+    function start() {
+      if (!running) {
+        running = true;
+        frame();
+      }
+    }
+    function stop() {
+      running = false;
+      cancelAnimationFrame(raf);
+    }
+
+    if (reduceMotion) {
+      // Render a single static frame, no animation loop.
+      renderer.render(scene, camera);
+      return;
+    }
+
+    // Only animate while the hero is on screen and the tab is visible.
+    new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) entry.isIntersecting ? start() : stop();
+      },
+      { threshold: 0.05 },
+    ).observe(container);
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) stop();
+      else start();
+    });
+  }
+</script>

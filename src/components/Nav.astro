@@ -1,0 +1,103 @@
+---
+import { nav, profile } from "../data/site";
+---
+
+<header
+  id="site-nav"
+  class="fixed inset-x-0 top-0 z-40 transition-colors duration-300"
+>
+  <nav class="container-px flex h-20 items-center justify-between">
+    <a
+      href="#top"
+      class="font-display text-lg font-bold tracking-tight text-white"
+    >
+      <span class="text-gradient">loria</span><span class="text-white/40">.dev</span>
+    </a>
+
+    <ul class="hidden items-center gap-1 md:flex">
+      {
+        nav.map((item) => (
+          <li>
+            <a
+              href={item.href}
+              class="rounded-full px-4 py-2 text-sm text-white/65 transition-colors hover:bg-white/5 hover:text-white"
+            >
+              {item.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <a
+      href="#contact"
+      class="hidden rounded-full border border-white/15 px-4 py-2 text-sm text-white/85 transition-colors hover:border-white/40 hover:text-white sm:inline-block"
+    >
+      Get in touch
+    </a>
+
+    <!-- Mobile menu toggle -->
+    <button
+      id="nav-toggle"
+      class="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 text-white/80"
+      aria-label="Toggle menu"
+      aria-expanded="false"
+    >
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <path d="M4 7h16M4 12h16M4 17h16" />
+      </svg>
+    </button>
+  </nav>
+
+  <!-- Mobile menu panel -->
+  <div
+    id="nav-panel"
+    class="hidden border-t border-white/5 bg-ink-900/95 backdrop-blur md:hidden"
+  >
+    <ul class="container-px flex flex-col gap-1 py-4">
+      {
+        nav.map((item) => (
+          <li>
+            <a
+              href={item.href}
+              class="block rounded-lg px-4 py-3 text-base text-white/75 transition-colors hover:bg-white/5 hover:text-white"
+              data-nav-link
+            >
+              {item.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</header>
+
+<script>
+  const header = document.getElementById("site-nav");
+  const toggle = document.getElementById("nav-toggle");
+  const panel = document.getElementById("nav-panel");
+
+  // Solidify the nav background once the user scrolls past the hero top.
+  const onScroll = () => {
+    if (!header) return;
+    if (window.scrollY > 24) {
+      header.classList.add("bg-ink-950/80", "backdrop-blur-md", "border-b", "border-white/5");
+    } else {
+      header.classList.remove("bg-ink-950/80", "backdrop-blur-md", "border-b", "border-white/5");
+    }
+  };
+  onScroll();
+  window.addEventListener("scroll", onScroll, { passive: true });
+
+  // Mobile menu open/close.
+  toggle?.addEventListener("click", () => {
+    const open = panel?.classList.toggle("hidden") === false;
+    toggle.setAttribute("aria-expanded", String(open));
+  });
+  panel?.querySelectorAll("[data-nav-link]").forEach((link) =>
+    link.addEventListener("click", () => {
+      panel.classList.add("hidden");
+      toggle?.setAttribute("aria-expanded", "false");
+    }),
+  );
+</script>

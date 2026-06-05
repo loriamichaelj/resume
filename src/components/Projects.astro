@@ -1,0 +1,83 @@
+---
+import { projects } from "../data/site";
+import SectionHeading from "./SectionHeading.astro";
+import Icon from "./Icon.astro";
+---
+
+<section id="projects" class="scroll-mt-24 py-20 sm:py-28">
+  <div class="container-px">
+    <div class="flex flex-wrap items-end justify-between gap-6">
+      <SectionHeading eyebrow="03 — Projects" title="Selected work" />
+      <a
+        href="https://github.com/loriamichaelj"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="reveal group inline-flex items-center gap-2 text-sm text-white/60 transition-colors hover:text-white"
+      >
+        All repositories on GitHub
+        <Icon name="external" class="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+      </a>
+    </div>
+
+    <div class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
+      {
+        projects.map((p, i) => (
+          <article
+            class="card-surface reveal group flex flex-col overflow-hidden p-7 sm:p-8"
+            data-delay={`${(i % 2) * 90}`}
+          >
+            {/* Gradient accent bar */}
+            <span class="absolute inset-x-0 top-0 h-[3px] origin-left scale-x-0 bg-brand-gradient transition-transform duration-500 group-hover:scale-x-100" />
+
+            <div class="flex items-start justify-between gap-4">
+              <span class="font-mono text-xs text-white/35">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              {p.period && (
+                <span class="font-mono text-xs uppercase tracking-wider text-white/40">
+                  {p.period}
+                </span>
+              )}
+            </div>
+
+            <h3 class="mt-4 font-display text-xl font-semibold text-white">
+              {p.title}
+            </h3>
+            <p class="mt-2 flex-1 text-sm leading-relaxed text-white/60">{p.blurb}</p>
+
+            <ul class="mt-5 flex flex-wrap gap-2">
+              {p.tags.map((t) => (
+                <li class="rounded-md bg-white/5 px-2.5 py-1 font-mono text-[11px] tracking-wide text-white/55">
+                  {t}
+                </li>
+              ))}
+            </ul>
+
+            <div class="mt-6 flex items-center gap-3 border-t border-white/5 pt-5">
+              <a
+                href={p.code}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-2 text-sm font-medium text-white/80 transition-colors hover:text-white"
+              >
+                <Icon name="github" class="h-4 w-4" />
+                View on GitHub
+              </a>
+              {p.demo && (
+                <a
+                  href={p.demo}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="ml-auto inline-flex items-center gap-1.5 text-sm font-medium text-white/80 transition-colors hover:text-white"
+                >
+                  Live demo
+                  <Icon name="external" class="h-3.5 w-3.5" />
+                </a>
+              )}
+            </div>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>

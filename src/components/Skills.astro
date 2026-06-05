@@ -1,0 +1,29 @@
+---
+import { skills } from "../data/site";
+import SectionHeading from "./SectionHeading.astro";
+---
+
+<section id="skills" class="scroll-mt-24 py-20 sm:py-28">
+  <div class="container-px grid gap-12 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+    <SectionHeading eyebrow="04 — Stack" title="Tools I work with" />
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      {
+        skills.map((group, i) => (
+          <div class="card-surface reveal p-6" data-delay={`${(i % 2) * 80}`}>
+            <h3 class="font-mono text-xs uppercase tracking-[0.2em] text-white/45">
+              {group.label}
+            </h3>
+            <ul class="mt-4 flex flex-wrap gap-2">
+              {group.items.map((item) => (
+                <li class="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-sm text-white/80 transition-colors hover:border-white/25 hover:text-white">
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>

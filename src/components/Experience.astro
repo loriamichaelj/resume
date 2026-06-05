@@ -1,0 +1,57 @@
+---
+import { experience } from "../data/site";
+import SectionHeading from "./SectionHeading.astro";
+---
+
+<section id="experience" class="scroll-mt-24 py-20 sm:py-28">
+  <div class="container-px">
+    <SectionHeading eyebrow="02 — Experience" title="Where I've worked & studied" />
+
+    <ol class="mt-14 space-y-4">
+      {
+        experience.map((item, i) => (
+          <li class="reveal" data-delay={`${i * 80}`}>
+            <article class="card-surface group p-6 transition-transform duration-300 hover:-translate-y-0.5 sm:p-8">
+              <div class="grid gap-5 sm:grid-cols-[10rem_1fr] sm:gap-8">
+                <div class="flex flex-col gap-2">
+                  <span class={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${item.kind === "work" ? "bg-flame/15 text-flame" : "bg-violet/20 text-indigo-300"}`}>
+                    {item.kind === "work" ? "Work" : "Education"}
+                  </span>
+                  <span class="font-mono text-xs uppercase tracking-wider text-white/40">
+                    {item.period}
+                  </span>
+                </div>
+
+                <div>
+                  <h3 class="font-display text-xl font-semibold text-white">
+                    {item.org}
+                  </h3>
+                  <p class="mt-0.5 text-sm font-medium text-white/55">{item.role}</p>
+
+                  <ul class="mt-4 space-y-2.5">
+                    {item.points.map((p) => (
+                      <li class="flex gap-3 text-sm leading-relaxed text-white/65">
+                        <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-rose" />
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {item.tags && (
+                    <ul class="mt-5 flex flex-wrap gap-2">
+                      {item.tags.map((t) => (
+                        <li class="rounded-full border border-white/10 px-3 py-1 text-xs text-white/55">
+                          {t}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </article>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</section>

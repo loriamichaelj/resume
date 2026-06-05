@@ -1,0 +1,112 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 6rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    @apply bg-ink-950 text-white/90 font-sans antialiased;
+  }
+
+  /* Fixed gradient backdrop via a pseudo-element instead of
+     background-attachment: fixed, which is janky on mobile (esp. iOS). */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      radial-gradient(60rem 40rem at 75% -10%, rgba(85, 61, 235, 0.16), transparent 60%),
+      radial-gradient(50rem 35rem at 0% 10%, rgba(243, 103, 165, 0.12), transparent 55%);
+  }
+
+  ::selection {
+    background: rgba(243, 103, 165, 0.35);
+    color: #fff;
+  }
+}
+
+@layer components {
+  .container-px {
+    @apply mx-auto w-full max-w-content px-6 sm:px-8 lg:px-12;
+  }
+
+  .eyebrow {
+    @apply font-mono text-xs uppercase tracking-[0.25em] text-white/45;
+  }
+
+  .text-gradient {
+    @apply bg-brand-gradient bg-clip-text text-transparent;
+  }
+
+  /* Thin gradient border using a masked pseudo-element. */
+  .card-surface {
+    @apply relative rounded-2xl bg-ink-900/70 backdrop-blur-sm;
+  }
+  .card-surface::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      150deg,
+      rgba(255, 255, 255, 0.14),
+      rgba(255, 255, 255, 0.02) 40%,
+      rgba(85, 61, 235, 0.18)
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    transition: background 0.4s ease;
+  }
+  .card-surface:hover::before {
+    background: linear-gradient(
+      150deg,
+      rgba(244, 73, 47, 0.5),
+      rgba(243, 103, 165, 0.4) 50%,
+      rgba(85, 61, 235, 0.5)
+    );
+  }
+
+  /* Scroll-reveal: elements start hidden, .is-visible is added by IntersectionObserver. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(22px);
+    transition:
+      opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity, transform;
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+}
