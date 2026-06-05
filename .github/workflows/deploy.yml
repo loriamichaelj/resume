@@ -10,11 +10,6 @@ permissions:
   pages: write
   id-token: write
 
-# Run JavaScript actions on Node.js 24 (incl. those bundled inside
-# withastro/action), ahead of the Node.js 20 runtime deprecation.
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 # Allow one concurrent deployment, cancelling in-progress runs.
 concurrency:
   group: pages
@@ -25,9 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Build Astro site
-        uses: withastro/action@v3
+        uses: withastro/action@v6
         with:
           node-version: 24
 
@@ -40,4 +35,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
