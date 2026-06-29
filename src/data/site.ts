@@ -65,7 +65,6 @@ export const experience: Experience[] = [
     org: "Independent Cloud Lab & Projects",
     role: "Cloud & Full-Stack Developer",
     period: "2025 – Present",
-    location: "California",
     kind: "work",
     points: [
       "Run a self-directed Azure lab that mirrors enterprise migration work — standing up production-style network, compute, and data tiers, then operating them end to end through monitoring, troubleshooting, and repeated teardown/rebuild cycles.",
@@ -78,7 +77,6 @@ export const experience: Experience[] = [
     org: "Restaurant Hospitality",
     role: "Assistant General Manager",
     period: "2023 – 2025",
-    location: "California",
     kind: "work",
     points: [
       "Managed the business's operational technology (point-of-sale, scheduling, and inventory systems); served as first point of contact for technical issues and vendor escalations.",
@@ -125,7 +123,6 @@ export type Project = {
 export const projects: Project[] = [
   {
     title: "Azure Cloud Infrastructure",
-    period: "2025 – Present",
     blurb:
       "A hub-and-spoke Azure Virtual Network with NSGs, VNet peering, and an Azure Bastion jump host — the network topology used in enterprise Azure migrations.",
     code: "https://github.com/loriamichaelj",
@@ -133,7 +130,6 @@ export const projects: Project[] = [
   },
   {
     title: "Cloud-Native Web App",
-    period: "2025 – Present",
     blurb:
       "A full-stack app on Azure App Service (Node.js / Express / React) backed by Azure SQL, with secrets in Key Vault and CI/CD via GitHub Actions.",
     code: "https://github.com/loriamichaelj",
@@ -141,7 +137,6 @@ export const projects: Project[] = [
   },
   {
     title: "Infrastructure as Code",
-    period: "2025 – Present",
     blurb:
       "Codifying the cloud environment as Bicep templates for repeatable, version-controlled, infrastructure-as-code deployments.",
     code: "https://github.com/loriamichaelj",
@@ -149,7 +144,6 @@ export const projects: Project[] = [
   },
   {
     title: "Full-Stack Web Development",
-    period: "2022 – 2023",
     blurb:
       "Self-directed, project-based deep dive into REST API design and the JavaScript stack — building and deploying multiple full-stack applications.",
     code: "https://github.com/loriamichaelj",
