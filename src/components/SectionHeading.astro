@@ -1,0 +1,18 @@
+---
+interface Props {
+  eyebrow: string;
+  title: string;
+  align?: "left" | "center";
+}
+const { eyebrow, title, align = "left" } = Astro.props;
+---
+
+<div class={`reveal ${align === "center" ? "text-center" : ""}`}>
+  <p class={`eyebrow ${align === "center" ? "justify-center" : ""} flex items-center gap-3`}>
+    {align === "left" && <span class="inline-block h-px w-8 bg-white/25"></span>}
+    {eyebrow}
+  </p>
+  <h2 class="mt-4 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+    {title}
+  </h2>
+</div>
