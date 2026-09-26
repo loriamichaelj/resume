@@ -41,7 +41,7 @@ export const certifications: Certification[] = [
   {
     name: "Azure Fundamentals",
     code: "AZ-900",
-    status: "Microsoft Certified · May 2026",
+    status: "Microsoft Certified",
   },
   {
     name: "AWS Certified Cloud Practitioner",
