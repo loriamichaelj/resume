@@ -1,4 +1,4 @@
-# Michael J. Loria — Portfolio
+# Michael J. Loria | Portfolio
 
 **Live site → https://loriamichaelj.github.io/resume/**
 
@@ -26,7 +26,7 @@ All site content (bio, socials, experience, projects, skills, nav) lives in a si
 src/data/site.ts
 ```
 
-Update the values there — every section reads from it, so there's no markup to touch for routine changes. Images live in `public/img/`.
+Update the values there. Every section reads from it, so there's no markup to touch for routine changes. Images live in `public/img/`.
 
 ## Structure
 
@@ -44,4 +44,4 @@ Every push to `main` is built and published to **GitHub Pages** at
 https://loriamichaelj.github.io/resume/ via the workflow in
 `.github/workflows/deploy.yml`.
 
-The build is fully static, so `dist/` can also be hosted anywhere — Netlify, Vercel, Cloudflare Pages. For a custom domain, update `site` (and remove `base`) in `astro.config.mjs`.
+The build is fully static, so `dist/` can also be hosted anywhere, such as Netlify, Vercel, or Cloudflare Pages. For a custom domain, update `site` (and remove `base`) in `astro.config.mjs`.

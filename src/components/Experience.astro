@@ -1,11 +1,18 @@
 ---
 import { experience } from "../data/site";
 import SectionHeading from "./SectionHeading.astro";
+import Icon from "./Icon.astro";
+
+const badge = {
+  project: { label: "Project", class: "bg-rose/15 text-rose" },
+  work: { label: "Work", class: "bg-flame/15 text-flame" },
+  education: { label: "Education", class: "bg-violet/20 text-indigo-300" },
+};
 ---
 
 <section id="experience" class="scroll-mt-24 py-20 sm:py-28">
   <div class="container-px">
-    <SectionHeading eyebrow="02 — Experience" title="Where I've worked & studied" />
+    <SectionHeading eyebrow="02 · Projects and Experience" title="What I've built & learned" />
 
     <ol class="mt-14 space-y-4">
       {
@@ -14,11 +21,8 @@ import SectionHeading from "./SectionHeading.astro";
             <article class="card-surface group p-6 transition-transform duration-300 hover:-translate-y-0.5 sm:p-8">
               <div class="grid gap-5 sm:grid-cols-[10rem_1fr] sm:gap-8">
                 <div class="flex flex-col gap-2">
-                  <span class={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${item.kind === "work" ? "bg-flame/15 text-flame" : "bg-violet/20 text-indigo-300"}`}>
-                    {item.kind === "work" ? "Work" : "Education"}
-                  </span>
-                  <span class="font-mono text-xs uppercase tracking-wider text-white/40">
-                    {item.period}
+                  <span class={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${badge[item.kind].class}`}>
+                    {badge[item.kind].label}
                   </span>
                   {item.location && (
                     <span class="text-xs text-white/35">{item.location}</span>
@@ -48,6 +52,18 @@ import SectionHeading from "./SectionHeading.astro";
                         </li>
                       ))}
                     </ul>
+                  )}
+
+                  {item.link && (
+                    <a
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="mt-5 inline-flex items-center gap-2 text-sm font-medium text-white/80 transition-colors hover:text-white"
+                    >
+                      <Icon name="github" class="h-4 w-4" />
+                      View on GitHub
+                    </a>
                   )}
                 </div>
               </div>

@@ -6,12 +6,12 @@
 export const profile = {
   name: "Michael J. Loria",
   firstName: "Michael",
-  role: "Cloud & Full-Stack Developer",
+  role: "Cloud DevOps & Full-Stack Engineer",
   // Short headline used in the hero.
   headline:
-    "I build cloud-native, full-stack applications — from Azure infrastructure to the user interface.",
+    "I build cloud-native, full-stack applications, from Multi-Cloud infrastructure to the user interface.",
   // Slightly longer bio for the About section.
-  bio: "Azure-certified application developer. I develop full-stack software and contribute to cloud migration end to end. Today I focus on designing cloud infrastructure on Microsoft Azure and building the full-stack apps that run on it.",
+  bio: "Cloud engineer certified in Azure and AWS. I develop full-stack software and contribute to cloud migration end to end. Today I focus on designing multi-cloud infrastructure and building the full-stack apps that run on it.",
   location: "",
   // Set to "" to hide the email call-to-action.
   email: "mikejloria@gmail.com",
@@ -22,12 +22,12 @@ export type Social = {
   label: string;
   href: string;
   // key maps to an inline SVG icon in the Icon component.
-  icon: "github" | "linkedin" | "email" | "twitter";
+  icon: "github" | "email" | "twitter";
 };
 
 export const socials: Social[] = [
   { label: "GitHub", href: "https://github.com/loriamichaelj", icon: "github" },
-  { label: "LinkedIn", href: "https://www.linkedin.com/", icon: "linkedin" },
+  { label: "X", href: "https://x.com/0xloria", icon: "twitter" },
   { label: "Email", href: "mailto:mikejloria@gmail.com", icon: "email" },
 ];
 
@@ -44,64 +44,87 @@ export const certifications: Certification[] = [
     status: "Microsoft Certified · May 2026",
   },
   {
-    name: "Azure Administrator Associate",
-    code: "AZ-104",
-    status: "In progress · target Q3 2026",
+    name: "AWS Certified Cloud Practitioner",
+    code: "CLF-C02",
+    status: "AWS Certified",
   },
 ];
 
 export type Experience = {
   org: string;
   role: string;
-  period: string;
   location?: string;
-  kind: "work" | "education";
+  kind: "project" | "work" | "education";
+  // Optional repository link, shown on project entries.
+  link?: string;
   points: string[];
   tags?: string[];
 };
 
 export const experience: Experience[] = [
   {
-    org: "Independent Cloud Lab & Projects",
-    role: "Cloud & Full-Stack Developer",
-    period: "2025 – Present",
-    kind: "work",
+    org: "Beacon",
+    role: "Three-tier incident tracker on AWS EC2",
+    kind: "project",
+    link: "https://github.com/loriamichaelj/beacon",
     points: [
-      "Run a self-directed Azure lab that mirrors enterprise migration work — standing up production-style network, compute, and data tiers, then operating them end to end through monitoring, troubleshooting, and repeated teardown/rebuild cycles.",
-      "Apply infrastructure-as-code and CI/CD discipline across every build: environments defined declaratively, secrets kept out of source, and changes shipped through automated, reviewable pipelines.",
-      "Translate hands-on lab work into public engineering artifacts — architecture diagrams, deployment runbooks, and documented source — at github.com/loriamichaelj.",
+      "Built a service and incident tracking app with a FastAPI REST API, a React and TypeScript UI, and PostgreSQL, including an overview dashboard and a timeline on every incident.",
+      "Provisioned AWS with Terraform: a shared VPC with VPC endpoints and no NAT gateway, an Application Load Balancer, an Auto Scaling Group, and RDS PostgreSQL, running on a Packer-built base AMI with the CloudWatch Agent.",
+      "Automated delivery with GitHub Actions over OIDC (test, build, database migration, rolling instance refresh, and smoke tests), plus rollback to any commit, drilled with zero downtime.",
     ],
-    tags: ["Azure VNet", "Bicep (IaC)", "App Service", "Azure SQL", "Key Vault", "GitHub Actions"],
+    tags: ["Terraform", "EC2 / Auto Scaling", "ALB", "RDS PostgreSQL", "Packer", "GitHub Actions", "FastAPI", "React"],
   },
   {
-    org: "Restaurant Hospitality",
-    role: "Assistant General Manager",
-    period: "2023 – 2025",
-    kind: "work",
+    org: "DORA Deployment Tracker",
+    role: "Software delivery metrics platform",
+    kind: "project",
+    link: "https://github.com/loriamichaelj/dora",
     points: [
-      "Managed the business's operational technology (point-of-sale, scheduling, and inventory systems); served as first point of contact for technical issues and vendor escalations.",
-      "Directed daily operations, scheduling, inventory, vendor management, and P&L reporting in a high-volume environment.",
-      "Hired, trained, and supervised staff; communicated under pressure, de-escalated complaints, and resolved escalated issues directly.",
+      "Built a three-tier app that records deployments, the commits they ship, and the failures they cause, and computes the five DORA software delivery metrics from that data.",
+      "Containerized the React, FastAPI, and PostgreSQL tiers with Docker Compose, using health-check-gated startup, least-privilege database roles, structured JSON logs, and Prometheus metrics.",
+      "Exposed an idempotent ingest API that CI pipelines call to report deployments. The app records its own builds through the same API.",
     ],
-    tags: ["Operations", "POS Systems", "Team Leadership", "Vendor Management", "P&L"],
+    tags: ["FastAPI", "React", "PostgreSQL", "Docker Compose", "Prometheus", "Playwright"],
+  },
+  {
+    org: "AWS CI/CD Framework",
+    role: "Reusable multi-environment release pipeline",
+    kind: "project",
+    link: "https://github.com/loriamichaelj/aws-cicd-framework",
+    points: [
+      "Built a reusable GitHub Actions deploy workflow that consumer repositories call by version tag, with dev, stage, and prod each building from their own branch behind required-reviewer approval.",
+      "Replaced long-lived AWS keys with GitHub OIDC federation. The deploy role trusts only approved environment identities, so an unapproved job cannot assume it.",
+      "Enforced container release discipline with multi-stage builds, non-root users, pinned base images, hadolint linting, and immutable SHA-tagged images, backed by a Terraform spec for the supporting AWS resources.",
+    ],
+    tags: ["GitHub Actions", "Docker", "AWS IAM (OIDC)", "Terraform", "S3"],
+  },
+  {
+    org: "Azure Hub-and-Spoke Network",
+    role: "Azure networking lab",
+    kind: "project",
+    link: "https://github.com/loriamichaelj/azure-hub-spoke",
+    points: [
+      "Deployed a three-VNet hub-and-spoke topology entirely from Azure CLI scripts, peering each spoke to the hub with no route between spokes so workloads stay isolated.",
+      "Locked down access with subnet-level NSGs: SSH reaches a single jump host only from the operator's IP, and spoke VMs are private and reachable only from the hub management subnet.",
+      "Wrote a verification suite that proves the isolation in both the control plane and the data plane, with deploy and destroy scripts that keep the lab cost disciplined.",
+    ],
+    tags: ["Azure VNet", "VNet Peering", "NSGs", "Azure CLI", "Bash"],
   },
   {
     org: "L.A. County Public Defender's Office",
-    role: "Application Developer Intern",
-    period: "2021 – 2022",
+    role: "Application Developer / Cloud Support Engineer",
     kind: "work",
     points: [
-      "Led an end-to-end cloud migration of a production Helpdesk backend from SharePoint Lists to Microsoft SQL Server on Azure for a 1,000+ user county agency — restructuring the schema, rewriting queries, and cutting page-load latency.",
-      "Maintained and extended a Java / Spring / Angular internal web app that replaced a manual, email-based intake process with a single self-service portal for IT tickets and equipment scheduling.",
+      "Led an end-to-end cloud migration of a production Helpdesk backend from SharePoint Lists to Microsoft SQL Server on Azure for a 1,000+ user county agency, restructuring the schema, rewriting queries, and cutting page load times.",
+      "Maintained and extended a Java / Spring / Angular internal web app that replaced a manual intake process run over email with a single self-service portal for IT tickets and equipment scheduling.",
       "Designed SQL tables, stored procedures, and REST endpoints consumed by the Angular front end, improving data consistency across modules.",
-      "Translated business needs from non-technical county staff into requirements, mock-ups, and shipped features on a 5-person Agile / Scrum team running weekly sprints.",
+      "Translated business needs from nontechnical county staff into requirements, mockups, and shipped features on an Agile / Scrum team of five running weekly sprints.",
     ],
     tags: ["Java / Spring", "Angular", "Azure SQL", "REST APIs", "Agile / Scrum"],
   },
   {
     org: "California State University, Los Angeles",
     role: "B.S. in Computer Science",
-    period: "2018 – 2022",
     kind: "education",
     points: [
       "Coursework: Data Structures, Algorithms, Software Engineering, Database Management, Operating Systems, Internet Architecture, Network Protocols, Cryptography, Cloud Computing, and Machine Learning.",
@@ -122,32 +145,46 @@ export type Project = {
 
 export const projects: Project[] = [
   {
-    title: "Azure Cloud Infrastructure",
+    title: "Azure and AWS Cloud Infrastructure",
     blurb:
-      "A hub-and-spoke Azure Virtual Network with NSGs, VNet peering, and an Azure Bastion jump host — the network topology used in enterprise Azure migrations.",
+      "Multi-cloud and hybrid infrastructure on AWS and Azure: compute, identity, storage, and serverless, connected through VPC peering, Transit Gateway, and ExpressRoute.",
     code: "https://github.com/loriamichaelj",
-    tags: ["Azure VNet", "NSGs", "Azure Bastion", "Peering"],
+    tags: ["EC2", "VPC", "IAM", "Azure VMs", "VNet", "Entra ID", "Transit Gateway", "ExpressRoute"],
   },
   {
-    title: "Cloud-Native Web App",
+    title: "Containerized Deployment",
     blurb:
-      "A full-stack app on Azure App Service (Node.js / Express / React) backed by Azure SQL, with secrets in Key Vault and CI/CD via GitHub Actions.",
+      "Containerizing applications with Docker and running them on Kubernetes with Helm across EKS and AKS, with images stored in ECR or ACR and releases delivered through GitOps.",
     code: "https://github.com/loriamichaelj",
-    tags: ["Azure App Service", "Azure SQL", "Key Vault", "CI/CD"],
+    tags: ["Docker", "Kubernetes", "Helm", "EKS / AKS", "ECR / ACR", "Istio", "ArgoCD"],
   },
   {
     title: "Infrastructure as Code",
     blurb:
-      "Codifying the cloud environment as Bicep templates for repeatable, version-controlled, infrastructure-as-code deployments.",
+      "Defining cloud environments as code with reusable Terraform modules and managed state, CloudFormation and Bicep templates, and Ansible playbooks, shipped through CI/CD pipelines.",
     code: "https://github.com/loriamichaelj",
-    tags: ["Bicep", "IaC", "Azure DevOps", "GitHub Actions"],
+    tags: ["Terraform", "CloudFormation", "Bicep", "Ansible", "GitHub Actions", "Jenkins"],
   },
   {
     title: "Full-Stack Web Development",
     blurb:
-      "Self-directed, project-based deep dive into REST API design and the JavaScript stack — building and deploying multiple full-stack applications.",
+      "End-to-end web application development, from well-structured REST APIs and backend services to responsive, component-driven front ends, deployed to the cloud through automated pipelines.",
     code: "https://github.com/loriamichaelj",
     tags: ["Node.js", "React", "Redux", "Express.js"],
+  },
+  {
+    title: "Monitoring",
+    blurb:
+      "Observability for cloud workloads: metrics, logs, and traces feeding dashboards and alerts, with SLOs and error budgets so issues are caught before users notice.",
+    code: "https://github.com/loriamichaelj",
+    tags: ["Prometheus", "Grafana", "ELK / Loki", "CloudWatch", "Azure Monitor", "OpenTelemetry", "PagerDuty"],
+  },
+  {
+    title: "Security",
+    blurb:
+      "Hardening cloud environments with least-privilege IAM, centralized secrets, threat detection, policy as code, and vulnerability scanning aligned to CIS benchmarks.",
+    code: "https://github.com/loriamichaelj",
+    tags: ["IAM", "Vault / Key Vault", "GuardDuty", "WAF", "OPA / Kyverno", "Trivy", "CIS"],
   },
 ];
 
@@ -158,35 +195,95 @@ export type SkillGroup = {
 
 export const skills: SkillGroup[] = [
   {
-    label: "Languages",
-    items: ["Java", "Python", "JavaScript / TypeScript", "C++", "SQL", "PL/SQL", "PowerShell"],
+    label: "Cloud Platforms",
+    items: [
+      "AWS (EC2, VPC, IAM, S3, RDS, Lambda, EKS, ECS, Route 53, CloudFront, Auto Scaling)",
+      "Azure (VMs, VNet, Entra ID, Storage, Blob, Functions, AKS, ACS, Policy, Blueprints, Cosmos DB, Monitor)",
+      "Multi-Cloud / Hybrid Cloud Strategy",
+      "Cloud Networking (VPC Peering, Transit Gateway, ExpressRoute)",
+    ],
   },
   {
-    label: "Frameworks & APIs",
-    items: ["Spring / Spring Boot", "Angular", "React", "Node.js", "Express.js", "REST", "SOAP"],
+    label: "Infrastructure as Code",
+    items: [
+      "Terraform (Modules, State, Best Practices)",
+      "CloudFormation / ARM / Bicep",
+      "Ansible (Playbooks, Roles)",
+      "GitOps (ArgoCD, Flux)",
+      "Pulumi / Crossplane",
+    ],
   },
   {
-    label: "Cloud & DevOps",
-    items: ["Microsoft Azure", "Bicep (IaC)", "Azure DevOps", "GitHub Actions", "CI/CD", "Git", "AWS / GCP"],
+    label: "CI/CD",
+    items: [
+      "Jenkins (Pipelines as Code)",
+      "GitHub Actions",
+      "GitLab CI / Azure DevOps Pipelines",
+      "AWS CodePipeline + CodeBuild",
+      "ArgoCD / Tekton / Harness",
+      "Artifact Management (ECR, ACR, Nexus)",
+    ],
   },
   {
-    label: "Databases",
-    items: ["SQL Server", "Azure SQL", "PostgreSQL", "MySQL", "MongoDB", "SharePoint Lists"],
+    label: "Containers",
+    items: [
+      "Docker (Best Practices)",
+      "Kubernetes (Helm, Deployments, Services)",
+      "EKS / AKS Management",
+      "Service Mesh (Istio)",
+      "Container Security (Trivy, Falco)",
+    ],
   },
   {
-    label: "Networking & Systems",
-    items: ["TCP/IP", "DNS / DHCP", "VPN", "NSGs", "Entra ID", "Linux", "Windows"],
+    label: "Monitoring",
+    items: [
+      "Prometheus + Grafana",
+      "ELK / Loki Stack",
+      "CloudWatch + Azure Monitor",
+      "OpenTelemetry + Jaeger",
+      "Alerting (PagerDuty, Opsgenie)",
+      "SLOs / Error Budgets",
+    ],
   },
   {
-    label: "Practices & Data",
-    items: ["Agile / Scrum", "SDLC", "OOP", "ITIL workflows", "Power BI", "ML"],
+    label: "Security",
+    items: [
+      "IAM & Least Privilege",
+      "Secrets Management (Vault, Key Vault)",
+      "Infrastructure Security (GuardDuty, WAF)",
+      "Policy as Code (OPA, Kyverno)",
+      "Compliance (CIS, SOC 2)",
+      "Vulnerability Scanning",
+    ],
+  },
+  {
+    label: "Scripting & Others",
+    items: [
+      "Python / Bash / PowerShell",
+      "Advanced Git",
+      "Agile + DevOps Culture",
+      "FinOps & Cost Optimization",
+      "Disaster Recovery & Backup",
+      "Go / Java (for tooling)",
+    ],
+  },
+  {
+    label: "Full-Stack Development",
+    items: [
+      "JavaScript / TypeScript",
+      "React / Angular",
+      "Node.js / Express",
+      "Spring Boot",
+      "REST APIs",
+      "SQL Server / PostgreSQL",
+    ],
   },
 ];
 
 export const nav = [
   { label: "About", href: "#about" },
-  { label: "Experience", href: "#experience" },
-  { label: "Projects", href: "#projects" },
+  { label: "Projects", href: "#experience" },
+  { label: "Services", href: "#services" },
   { label: "Skills", href: "#skills" },
   { label: "Contact", href: "#contact" },
 ];

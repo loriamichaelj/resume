@@ -8,7 +8,7 @@ interface Props {
 }
 
 const {
-  title = `${profile.name} — ${profile.role}`,
+  title = `${profile.name} | ${profile.role}`,
   description = profile.bio,
 } = Astro.props;
 ---
@@ -56,7 +56,7 @@ const {
     <slot />
 
     <script>
-      // Scroll reveal — adds .is-visible to .reveal elements as they enter view.
+      // Scroll reveal: adds .is-visible to .reveal elements as they enter view.
       const reveals = document.querySelectorAll<HTMLElement>(".reveal");
       const prefersReduced = window.matchMedia(
         "(prefers-reduced-motion: reduce)",
