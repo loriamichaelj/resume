@@ -1,5 +1,6 @@
 // -----------------------------------------------------------------------------
-// Quick definitions for the technology tags in Projects and Experience.
+// Quick definitions for the technology tags in Projects and Experience and
+// the tools marquee.
 // Click a tag to open its card. Keys match the tag text exactly; `aliases`
 // covers the same term written another way.
 // -----------------------------------------------------------------------------
@@ -217,6 +218,78 @@ export const glossary: Record<string, Term> = {
     definition:
       "Bash is the standard command-line shell on Linux and macOS. Bash scripts chain commands together with variables, conditions and loops to automate tasks. In DevOps it is the glue for deployment scripts, CI steps and server setup.",
     docs: [{ label: "Bash manual", url: "https://www.gnu.org/software/bash/manual/" }],
+  },
+  AWS: {
+    category: "Cloud platform",
+    definition:
+      "Amazon Web Services is the largest public cloud platform, with more than 200 services for compute, storage, databases, networking and more. You rent what you need on demand and pay for what you use, instead of buying and running hardware. Core building blocks include EC2, S3, VPC, IAM and RDS.",
+    docs: [{ label: "AWS documentation", url: "https://docs.aws.amazon.com/" }],
+  },
+  Azure: {
+    category: "Cloud platform",
+    definition:
+      "Microsoft Azure is Microsoft's public cloud platform for compute, storage, networking, databases and AI. It integrates closely with Microsoft tools such as Entra ID, Windows Server and Microsoft 365. Organisations often use it to run and migrate enterprise workloads, including hybrid setups that span their own data centres.",
+    docs: [{ label: "Azure documentation", url: "https://learn.microsoft.com/en-us/azure/" }],
+  },
+  GCP: {
+    category: "Cloud platform",
+    definition:
+      "Google Cloud Platform is Google's public cloud, running on the same infrastructure as Google's own products. It is known for Kubernetes (GKE), data analytics (BigQuery) and machine learning services. Like AWS and Azure, it offers on-demand compute, storage, networking and managed databases.",
+    docs: [{ label: "Google Cloud docs", url: "https://cloud.google.com/docs" }],
+  },
+  Kubernetes: {
+    category: "Container orchestration",
+    definition:
+      "Kubernetes is an open-source system for running containers across a cluster of machines. You declare what should run, such as how many copies of a service, and it schedules, restarts and scales containers to match. It handles service discovery, rolling updates and self-healing, and every major cloud offers it as a managed service.",
+    docs: [{ label: "Kubernetes docs", url: "https://kubernetes.io/docs/home/" }],
+  },
+  Helm: {
+    category: "Kubernetes · Packaging",
+    definition:
+      "Helm is the package manager for Kubernetes. It bundles an application's Kubernetes manifests into a versioned, configurable chart. One command installs, upgrades or rolls back a release, with values files to vary settings per environment.",
+    docs: [{ label: "Helm docs", url: "https://helm.sh/docs/" }],
+  },
+  ArgoCD: {
+    category: "GitOps · Continuous delivery",
+    definition:
+      "Argo CD is a GitOps continuous delivery tool for Kubernetes. It watches a Git repository and keeps the cluster in sync with the manifests stored there. Changes are deployed by merging to Git, and any drift in the cluster is shown and can be corrected automatically.",
+    docs: [{ label: "Argo CD docs", url: "https://argo-cd.readthedocs.io/en/stable/" }],
+  },
+  Ansible: {
+    category: "Configuration management",
+    definition:
+      "Ansible is an open-source automation tool for configuring servers and deploying software. Tasks are written in YAML playbooks and run over SSH, with no agent to install on the machines. Its modules are idempotent, so running a playbook again only changes what is out of date.",
+    docs: [{ label: "Ansible docs", url: "https://docs.ansible.com/" }],
+  },
+  Grafana: {
+    category: "Observability · Dashboards",
+    definition:
+      "Grafana is an open-source tool for visualising metrics, logs and traces on dashboards. It connects to data sources such as Prometheus, Loki, CloudWatch and many databases. Teams use it to watch system health at a glance and to set up alerts.",
+    docs: [{ label: "Grafana docs", url: "https://grafana.com/docs/grafana/latest/" }],
+  },
+  OpenTelemetry: {
+    category: "Observability · Instrumentation",
+    definition:
+      "OpenTelemetry is an open standard and set of SDKs for collecting traces, metrics and logs from applications. You instrument code once and send the data to any compatible backend, such as Jaeger, Prometheus or Datadog. It is a Cloud Native Computing Foundation project and the common way to add vendor-neutral observability.",
+    docs: [{ label: "OpenTelemetry docs", url: "https://opentelemetry.io/docs/" }],
+  },
+  Datadog: {
+    category: "Observability platform",
+    definition:
+      "Datadog is a cloud monitoring and observability platform delivered as a service. It gathers metrics, logs and traces from servers, containers and cloud services into one place. Dashboards, alerts and application performance monitoring help teams find and fix problems quickly.",
+    docs: [{ label: "Datadog docs", url: "https://docs.datadoghq.com/" }],
+  },
+  Vault: {
+    category: "Security · Secrets management",
+    definition:
+      "HashiCorp Vault stores and controls access to secrets such as passwords, API keys and certificates. Applications authenticate to Vault and receive only the secrets they are allowed to read, and every access is audited. It can also issue short-lived dynamic credentials, such as database logins that expire automatically.",
+    docs: [{ label: "Vault docs", url: "https://developer.hashicorp.com/vault/docs" }],
+  },
+  Istio: {
+    category: "Kubernetes · Service mesh",
+    definition:
+      "Istio is an open-source service mesh for Kubernetes. It adds a proxy alongside each service to handle the traffic between them, without changing application code. That gives mutual TLS encryption, fine-grained traffic routing and detailed telemetry across microservices.",
+    docs: [{ label: "Istio docs", url: "https://istio.io/latest/docs/" }],
   },
   "Operating Systems": {
     category: "Computer science",

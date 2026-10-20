@@ -1,9 +1,13 @@
 ---
 import { marquee } from "../data/site";
+import { lookup } from "../data/glossary";
 
 // Two tilted rows of tool names drifting in opposite directions. motion.ts
 // moves them, speeds them up with scroll velocity and flips them with scroll
-// direction. Each row repeats its items twice so the loop is seamless.
+// direction, and eases them to a stop while hovered or while a definition is
+// open. Each pill opens a definition card (TermCard). Each row repeats its
+// items twice so the loop is seamless; only the first copy in the first row
+// is reachable by keyboard and screen reader.
 const half = Math.ceil(marquee.length / 2);
 const rows = [marquee, [...marquee.slice(half), ...marquee.slice(0, half)]];
 ---
@@ -14,18 +18,39 @@ const rows = [marquee, [...marquee.slice(half), ...marquee.slice(0, half)]];
       rows.map((items, r) => (
         <div class="marquee-row [transform:rotateX(14deg)]" data-marquee={r === 0 ? "1" : "-1"}>
           <ul class="marquee-track" aria-hidden={r === 1 ? "true" : undefined}>
-            {[...items, ...items].map((item, i) => (
-              <li
-                class="flex shrink-0 items-center gap-3 rounded-full border border-white/10 bg-ink-900/70 px-5 py-2.5 font-display text-base font-medium text-white/80 sm:text-lg"
-                aria-hidden={i >= items.length ? "true" : undefined}
-              >
+            {[...items, ...items].map((item, i) => {
+              const entry = lookup(item);
+              const copy = r === 1 || i >= items.length;
+              const dot = (
                 <span
                   class="h-2 w-2 rounded-full bg-brand-gradient"
                   style={`background-position: ${(i % items.length) * 13}% 0; background-size: 600% 100%`}
                 />
-                {item}
-              </li>
-            ))}
+              );
+              return (
+                <li class="shrink-0" aria-hidden={i >= items.length ? "true" : undefined}>
+                  {entry ? (
+                    <button
+                      type="button"
+                      class="marquee-pill"
+                      data-term={entry.key}
+                      aria-haspopup="dialog"
+                      aria-expanded="false"
+                      aria-controls="term-card"
+                      tabindex={copy ? -1 : undefined}
+                    >
+                      {dot}
+                      {item}
+                    </button>
+                  ) : (
+                    <span class="marquee-pill">
+                      {dot}
+                      {item}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       ))

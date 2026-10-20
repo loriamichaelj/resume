@@ -373,6 +373,9 @@ export function createCloud(opts: {
   let placed = false;
   let alpha = 0;
   let labelsAlpha = 0;
+  // The UFOs are night visitors: they fade away in light mode.
+  let fleetTarget = opts.light ? 0 : 1;
+  let fleetVis = fleetTarget;
   let lastX = 0;
   let bank = 0;
   let squash = 0;
@@ -387,6 +390,7 @@ export function createCloud(opts: {
   });
 
   function setTheme(light: boolean) {
+    fleetTarget = light ? 0 : 1;
     const t = light ? THEMES.light : THEMES.dark;
     uniforms.uSun.value.set(t.sun);
     uniforms.uSkyTop.value.set(t.top);
@@ -528,7 +532,9 @@ export function createCloud(opts: {
     body.position.y += (Math.random() - 0.5) * 0.03 * shake;
 
     // UFOs: fade while flying behind the cloud.
-    const fleetAlpha = smoothstep((alpha - 0.3) / 0.5);
+    fleetVis = damp(fleetVis, fleetTarget, 3, dt);
+    orbits.visible = fleetVis > 0.01;
+    const fleetAlpha = smoothstep((alpha - 0.3) / 0.5) * fleetVis;
     orbits.rotation.y = time * 0.05;
     const behind: boolean[] = [];
     for (const o of ufos) {
@@ -550,7 +556,7 @@ export function createCloud(opts: {
     }
 
     // DOM labels ride just above each saucer.
-    labelsAlpha = damp(labelsAlpha, alpha > 0.85 ? 1 : 0, 4, dt);
+    labelsAlpha = damp(labelsAlpha, alpha > 0.85 ? fleetVis : 0, 4, dt);
     ufos.forEach((o, i) => {
       const el = opts.labels[i];
       if (!el) return;

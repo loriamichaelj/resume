@@ -1,8 +1,8 @@
-// Definition cards for the technology tags in Projects and Experience. Clicking
-// a tag ([data-term]) opens one shared card (#term-card) beside it with a
-// short definition and docs links; clicking the tag again, clicking outside
-// or pressing Escape closes it. Definitions come from src/data/glossary.ts,
-// embedded in the page as JSON.
+// Definition cards for the technology tags in Projects and Experience and the
+// pills in the tools marquee. Clicking a tag ([data-term]) opens one shared
+// card (#term-card) beside it with a short definition and docs links;
+// clicking the tag again, clicking outside or pressing Escape closes it.
+// Definitions come from src/data/glossary.ts, embedded in the page as JSON.
 
 type Term = {
   category: string;

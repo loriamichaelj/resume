@@ -158,7 +158,17 @@ export function createWorld(canvas: HTMLCanvasElement) {
     { passive: true },
   );
   document.documentElement.addEventListener("pointerleave", () => (pointer.active = false));
-  window.addEventListener("pointerdown", (e) => cloud.poke(e.clientX, e.clientY), { passive: true });
+  // A click on the cloud sets off its storm, unless it lands on something
+  // interactive in front of it (a link, a button, a tag, the definition card).
+  const INTERACTIVE = "a, button, input, select, textarea, label, [role='dialog']";
+  window.addEventListener(
+    "pointerdown",
+    (e) => {
+      if ((e.target as Element | null)?.closest?.(INTERACTIVE)) return;
+      cloud.poke(e.clientX, e.clientY);
+    },
+    { passive: true },
+  );
 
   // ---- Theme -------------------------------------------------------------------
   function applyTheme() {

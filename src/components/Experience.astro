@@ -1,6 +1,6 @@
 ---
 import { experience } from "../data/site";
-import { glossary, lookup } from "../data/glossary";
+import { lookup } from "../data/glossary";
 import SectionHeading from "./SectionHeading.astro";
 import Icon from "./Icon.astro";
 
@@ -23,7 +23,7 @@ const badge = {
   </div>
 
   <div class="container-px">
-    <SectionHeading eyebrow="Projects and Experience" title="What I've built & learned" />
+    <SectionHeading eyebrow="Projects and Experience" title="What I've built" />
     <p class="reveal mt-5 flex items-center gap-2 text-sm text-white/50" data-delay="200">
       <Icon name="info" class="h-4 w-4" />
       Tap or click any tag for a quick definition.
@@ -111,25 +111,5 @@ const badge = {
       </ol>
     </div>
   </div>
-
-  <!-- One definition card, filled and positioned by src/scripts/glossary.ts. -->
-  <script is:inline type="application/json" id="glossary-data" set:html={JSON.stringify(glossary)} />
-  <div id="term-card" class="term-card" role="dialog" aria-modal="false" aria-labelledby="term-card-title" tabindex="-1" hidden>
-    <div class="flex items-start justify-between gap-4">
-      <div>
-        <p class="font-mono text-[10px] uppercase tracking-[0.2em] text-white/50" data-category></p>
-        <h4 id="term-card-title" class="mt-1 font-display text-lg font-semibold text-white" data-title></h4>
-      </div>
-      <button type="button" class="term-card-close" aria-label="Close definition" data-close>
-        <Icon name="close" class="h-4 w-4" />
-      </button>
-    </div>
-    <p class="mt-3 text-sm leading-relaxed text-white/75" data-definition></p>
-    <ul class="mt-4 flex flex-wrap gap-x-4 gap-y-1.5" data-docs></ul>
-  </div>
 </section>
-
-<script>
-  import "../scripts/glossary";
-</script>
 

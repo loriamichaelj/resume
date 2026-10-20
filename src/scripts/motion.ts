@@ -129,6 +129,19 @@ if (marqueeRows.length && "IntersectionObserver" in window) {
     marqueeRows[0].row.parentElement!,
   );
 }
+// The band eases to a stop while hovered, while a pill has focus, or while one
+// of its definition cards is open, so a pill stays put to be clicked or read.
+const marqueeBand = marqueeRows[0]?.row.closest("section") ?? null;
+let marqueeHover = false;
+let marqueeFlow = 1;
+if (marqueeBand) {
+  marqueeBand.addEventListener("pointerenter", (e) => (marqueeHover = e.pointerType === "mouse"));
+  marqueeBand.addEventListener("pointerleave", () => (marqueeHover = false));
+}
+const marqueeHeld = () =>
+  !!marqueeBand &&
+  (marqueeHover || marqueeBand.matches(":focus-within") || !!marqueeBand.querySelector('[aria-expanded="true"]'));
+
 function measureMarquee() {
   for (const m of marqueeRows) m.half = m.track.scrollWidth / 2;
 }
@@ -211,7 +224,8 @@ function frame(_: number, dt: number) {
     });
 
     if (marqueeVisible) {
-      const speed = 40 + Math.min(Math.abs(velocity) * 0.25, 600);
+      marqueeFlow += ((marqueeHeld() ? 0 : 1) - marqueeFlow) * (1 - Math.exp(-6 * dt));
+      const speed = (40 + Math.min(Math.abs(velocity) * 0.25, 600)) * marqueeFlow;
       for (const m of marqueeRows) {
         if (!m.half) continue;
         m.x -= speed * dt * m.dir * direction;
