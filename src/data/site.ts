@@ -172,7 +172,6 @@ export const experience: Experience[] = [
   {
     org: "California State University, Los Angeles",
     role: "Bachelor of Science in Computer Science",
-    period: "2018 – 2022",
     location: "Los Angeles, CA",
     kind: "education",
     points: [
