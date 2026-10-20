@@ -39,6 +39,7 @@ Update the values there. Every section reads from it, so there's no markup to to
 ```
 src/
 ├─ data/site.ts            # single source of truth for content
+├─ data/glossary.ts        # definitions behind the clickable tags in Projects and Experience
 ├─ layouts/Layout.astro    # <head>, fonts, progress bar, cursor glow, scene + motion scripts
 ├─ components/             # Nav, Hero, Marquee, About, Experience, Projects, Skills, Contact, Footer,
 │                          # Icon, SectionHeading, Scene3D (the WebGL canvas)

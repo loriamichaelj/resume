@@ -37,6 +37,7 @@
     --c-rose: 255 95 162;
     --c-peach: 255 179 107;
     --c-flame: 255 120 73;
+    --c-dot: 217 119 6; /* hero status dot: amber on dark... */
     --brand-gradient: linear-gradient(
       110deg,
       rgb(var(--c-aqua)) 0%,
@@ -63,6 +64,7 @@
     --c-rose: 234 88 12; /* deep orange */
     --c-peach: 225 29 72; /* rose */
     --c-flame: 220 38 38; /* red-orange */
+    --c-dot: 56 217 255; /* ...and aqua on light */
   }
 
   html {
@@ -465,6 +467,81 @@
     will-change: transform;
   }
 
+  /* ---------------------------------------------------------------------------
+     Glossary: tags that open a definition card (src/scripts/glossary.ts).
+     ------------------------------------------------------------------------ */
+  .term-chip {
+    @apply inline-flex items-center rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-white/60 transition-colors;
+  }
+  button.term-chip {
+    @apply cursor-pointer hover:border-white/30 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet/60;
+  }
+  button.term-chip[aria-expanded="true"] {
+    border-color: rgb(var(--c-violet) / 0.6);
+    background: rgb(var(--c-violet) / 0.15);
+    color: rgb(var(--c-fg));
+  }
+  .term-card {
+    @apply absolute z-50 rounded-2xl p-5 text-left;
+    width: min(22rem, calc(100vw - 24px));
+    background: rgb(var(--c-ink-900) / 0.92);
+    border: 1px solid rgb(var(--c-edge) / 0.12);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    backdrop-filter: blur(14px) saturate(140%);
+    box-shadow:
+      0 24px 60px -20px rgb(0 0 0 / 0.55),
+      0 0 0 1px rgb(var(--c-violet) / 0.12);
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+    transform-origin: var(--arrow-x, 50%) top;
+    transition:
+      opacity 0.22s ease,
+      transform 0.28s var(--ease-out);
+  }
+  .term-card[data-side="top"] {
+    transform: translateY(-6px) scale(0.97);
+    transform-origin: var(--arrow-x, 50%) bottom;
+  }
+  .term-card.is-open {
+    opacity: 1;
+    transform: none;
+  }
+  .term-card:focus {
+    outline: none;
+  }
+  /* Little pointer toward the tag. */
+  .term-card::before {
+    content: "";
+    position: absolute;
+    left: calc(var(--arrow-x, 50%) - 6px);
+    top: -6px;
+    width: 12px;
+    height: 12px;
+    transform: rotate(45deg);
+    background: inherit;
+    border-left: 1px solid rgb(var(--c-edge) / 0.12);
+    border-top: 1px solid rgb(var(--c-edge) / 0.12);
+  }
+  .term-card[data-side="top"]::before {
+    top: auto;
+    bottom: -6px;
+    border: 0;
+    border-right: 1px solid rgb(var(--c-edge) / 0.12);
+    border-bottom: 1px solid rgb(var(--c-edge) / 0.12);
+  }
+  :root.light .term-card {
+    background: rgb(var(--c-ink-900) / 0.95);
+    box-shadow:
+      0 24px 60px -24px rgb(124 45 18 / 0.35),
+      0 0 0 1px rgb(var(--c-violet) / 0.15);
+  }
+  .term-card-close {
+    @apply -mr-1 -mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white/50 transition-colors hover:bg-white/10 hover:text-white;
+  }
+  .term-card-link {
+    @apply text-xs font-medium text-white/70 underline decoration-white/20 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60;
+  }
+
   /* Nav: the shell turns into a floating glass pill once you scroll. */
   .nav-shell {
     border: 1px solid transparent;
@@ -495,7 +572,8 @@
     .reveal,
     .hero-char,
     .heading-word > span,
-    .rotator-word {
+    .rotator-word,
+    .term-card {
       opacity: 1;
       transform: none;
       filter: none;

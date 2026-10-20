@@ -101,7 +101,7 @@ export const experience: Experience[] = [
     kind: "project",
     link: "https://github.com/loriamichaelj/shiptrack-platform",
     points: [
-      "Planned and ran a cloud migration of a FastAPI shipment-tracking app from EC2 hosts to EKS across four repositories, assessing sixteen deliberate anti-patterns and choosing replatform, refactor, retain, or retire for each using the 7 Rs.",
+      "Planned and ran a cloud migration of a FastAPI shipment-tracking app from EC2 hosts to EKS across four repositories, assessing sixteen anti-patterns and choosing replatform, refactor, retain, or retire for each using the 7 Rs.",
       "Moved traffic in waves by changing weighted ALB rules through pull requests, with a stack header on every response so a misrouted test fails. Rolling back is changing the weights back, and the legacy stack stays up as the fallback.",
       "Took the same container image to AKS and to GKE Autopilot with Cloud SQL, Pub/Sub, and Workload Identity, using a cloud seam in the app and per-cloud Terraform.",
       "Applied every infrastructure change through GitHub Actions over OIDC with a reviewer approving each apply, and a CI scrub that fails any pull request that commits an account ID or secret.",
