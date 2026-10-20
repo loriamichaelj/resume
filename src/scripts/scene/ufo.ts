@@ -5,8 +5,16 @@ import * as THREE from "three";
 // with chasing lights; a glass dome with an antenna; a tractor
 // emitter underneath; and twin thrusters that leave a flickering flame trail
 // along the orbit. Sizes are in the cloud's local units (the cloud is ~2 wide).
+//
+// Each saucer has health. Lightning hits (see cloud.ts) flash and jolt it,
+// and damage builds up visibly: scorch marks, flickering lights, sputtering
+// thrusters and a trail that turns to fire. At zero it explodes, spirals down
+// and disappears, then warps back in a little later.
 
 const HULL_R = 0.15;
+export const MAX_HEALTH = 3;
+const RESPAWN_AFTER = 12; // seconds a destroyed saucer stays gone
+const DEBRIS = 28;
 const TRAIL_POINTS = 72;
 const RIM_LIGHTS = 12;
 
@@ -29,6 +37,8 @@ const hullFragment = /* glsl */ `
   uniform vec3 uAccent;
   uniform float uOpacity;
   uniform float uTime;
+  uniform float uDamage; // 0 healthy .. 1 nearly destroyed
+  uniform float uHit; // white flash when struck
   varying vec3 vNormal;
   varying vec3 vView;
   varying vec3 vLocal;
@@ -56,10 +66,17 @@ const hullFragment = /* glsl */ `
     float arc = cell * TAU * r / 10.0;
     float hole = smoothstep(0.012, 0.007, length(vec2(arc, r - 0.122))) * top;
     float blink = 0.75 + 0.25 * sin(uTime * 3.0 + floor(ang * 10.0 / TAU) * 1.7);
+    // Damaged portholes short out at random.
+    float fault = step(0.6, fract(sin(floor(uTime * 11.0) * 12.9 + floor(ang * 10.0 / TAU) * 78.2) * 43758.5));
+    blink *= 1.0 - fault * uDamage;
     col = mix(col, uAccent * 1.5 + 0.25, hole * blink);
 
     col += pow(max(dot(reflect(-L, n), v), 0.0), 30.0) * 0.6 * (0.5 + 0.5 * top);
     col += pow(1.0 - abs(dot(n, v)), 2.5) * uAccent * 0.4;
+    // Scorch marks spread as damage builds.
+    float burn = smoothstep(0.2, 0.9, sin(vLocal.x * 41.0) * sin(vLocal.z * 37.0) * 0.5 + 0.5 + uDamage * 0.4);
+    col *= 1.0 - burn * uDamage * 0.55;
+    col = mix(col, vec3(1.0, 0.97, 0.92), uHit * 0.85);
     gl_FragColor = vec4(col, uOpacity);
   }
 `;
@@ -202,6 +219,7 @@ const sparkFragment = /* glsl */ `
 
 export type UfoFrame = {
   time: number;
+  dt: number;
   angle: number; // position along the orbit (radians)
   radius: number;
   zScale: number; // orbit ellipse depth factor
@@ -226,7 +244,7 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
   ship.add(craft);
   craft.add(spinner);
 
-  const hullMat = lit(hullFragment, { uTime: { value: 0 } });
+  const hullMat = lit(hullFragment, { uTime: { value: 0 }, uDamage: { value: 0 }, uHit: { value: 0 } });
   const profile = [
     [0.0, -0.036],
     [0.04, -0.04],
@@ -390,6 +408,10 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
   trailGeo.setAttribute("aK", new THREE.BufferAttribute(trailK, 1));
   trailGeo.setAttribute("aSeed", new THREE.BufferAttribute(trailSeed, 1));
   const trailMat = sparkMaterial(true);
+  // The trail has its own colour, so damage can turn it to fire.
+  const trailColor = accent.clone();
+  const FIRE = new THREE.Color("#ff4a1c");
+  trailMat.uniforms.uColor = { value: trailColor };
   const trail = new THREE.Points(trailGeo, trailMat);
   trail.frustumCulled = false;
 
@@ -398,10 +420,76 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
   for (const o of [hull, band, collar, antenna, emitter, ...nozzles]) o.renderOrder = 5;
   for (const o of [dome, rim, tip, flame, under, trail, ...plumeMeshes]) o.renderOrder = 6;
 
+  // ---- Explosion: a flash and a spray of debris where the saucer died -------
+  const boomMat = new THREE.SpriteMaterial({
+    map: glow,
+    color: "#ffd8a0",
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const boom = new THREE.Sprite(boomMat);
+  boom.visible = false;
+  boom.renderOrder = 7;
+  ship.add(boom);
+  const debrisGeo = new THREE.BufferGeometry();
+  debrisGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(DEBRIS * 3), 3));
+  const debrisMat = new THREE.PointsMaterial({
+    map: glow,
+    color: "#ffcf8a",
+    size: 0.04,
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const debris = new THREE.Points(debrisGeo, debrisMat);
+  debris.visible = false;
+  debris.frustumCulled = false;
+  debris.renderOrder = 7;
+  ship.add(debris);
+  const debrisVel = Array.from({ length: DEBRIS }, () => new THREE.Vector3());
+
   const shaders = [hullMat, bandMat, emitterMat, metalMat, domeMat, plumeMat];
   const sparks = [rimMat, trailMat];
-  const sprites = [tipMat, flameMat, underMat];
+  const sprites = [tipMat, flameMat, underMat, boomMat, debrisMat];
   let scale = 1;
+
+  // ---- Health ----------------------------------------------------------------
+  let health = MAX_HEALTH;
+  let hitFlash = 0; // white flash when struck
+  let jolt = 0; // knock-back wobble when struck
+  let dying = -1; // seconds since it was destroyed (-1 while alive)
+  let deadFor = 0;
+  let warp = 1; // 0..1 respawn warp-in
+  let deathAngle = 0;
+  let lastAngle = 0;
+  let deathSpin = 0;
+  let visibility = 1; // how much of the saucer is showing (for labels)
+
+  // A lightning hit. Returns true if it destroyed the saucer.
+  function hit() {
+    if (health <= 0) return false;
+    health -= 1;
+    hitFlash = 1;
+    jolt = 1;
+    if (health > 0) return false;
+    dying = 0;
+    deathAngle = lastAngle;
+    deathSpin = 0;
+    const pos = debrisGeo.getAttribute("position") as THREE.BufferAttribute;
+    for (let i = 0; i < DEBRIS; i++) {
+      pos.setXYZ(i, 0, 0, 0);
+      debrisVel[i]
+        .set(Math.random() - 0.5, Math.random() * 0.8 - 0.2, Math.random() - 0.5)
+        .normalize()
+        .multiplyScalar(0.4 + Math.random() * 0.9);
+    }
+    pos.needsUpdate = true;
+    debris.visible = boom.visible = true;
+    return true;
+  }
 
   function setTheme(light: boolean) {
     const blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
@@ -419,7 +507,10 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
   }
 
   function update(f: UfoFrame) {
-    const { time, angle, radius, zScale } = f;
+    const { time, radius, zScale, dt } = f;
+    lastAngle = f.angle;
+    // A destroyed saucer stops where it was hit.
+    const angle = dying >= 0 ? deathAngle : f.angle;
     ship.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius * zScale);
     // Face along the orbit's tangent, so the thrusters (-x) point back.
     const tx = -Math.sin(angle) * radius;
@@ -440,15 +531,82 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
     hullMat.uniforms.uTime.value = time + phase;
     bandMat.uniforms.uPulse.value = 0.85 + 0.15 * Math.sin(time * 2.2 + phase);
     emitterMat.uniforms.uPulse.value = 0.6 + 0.4 * Math.sin(time * 4 + phase);
+
+    // ---- Damage, hits, destruction and respawn ------------------------------
+    const damage = 1 - Math.max(health, 0) / MAX_HEALTH;
+    hitFlash = Math.max(0, hitFlash - dt * 6);
+    jolt = Math.max(0, jolt - dt * 2.5);
+    hullMat.uniforms.uDamage.value = damage;
+    hullMat.uniforms.uHit.value = hitFlash;
+    // Knocked about when struck; limping and listing as damage builds.
+    craft.rotation.x += Math.sin(time * 26) * 0.35 * jolt + Math.sin(time * 7 + phase) * 0.08 * damage;
+    craft.rotation.z -= 0.14 * damage;
+    craft.position.y -= 0.025 * damage;
+    // Lights short out and thrusters sputter.
+    if (damage > 0 && Math.random() < damage * 0.22) {
+      bandMat.uniforms.uPulse.value *= 0.15;
+      emitterMat.uniforms.uPulse.value *= 0.1;
+    }
+    if (damage > 0 && Math.random() < damage * 0.16) for (const p of plumes) p.scale.setScalar(0.15);
+    trailColor.copy(accent).lerp(FIRE, Math.min(1, damage * 1.3));
+
+    let trailFade = 1;
+    if (dying >= 0) {
+      dying += dt;
+      const k = Math.min(1, dying / 1.1);
+      // Spiral down and fade out.
+      deathSpin += dt * (6 + k * 18);
+      craft.rotation.y = deathSpin;
+      craft.rotation.z -= k * 1.2;
+      craft.position.y -= k * k * 0.7;
+      visibility = 1 - THREE.MathUtils.smoothstep(k, 0.45, 1);
+      trailFade = 1 - k;
+      // The blast: a quick flash, then debris arcing outward and falling.
+      const b = Math.min(1, dying / 0.45);
+      boom.scale.setScalar(0.15 + b * 1.1);
+      boomMat.opacity = (1 - b) * f.opacity;
+      const pos = debrisGeo.getAttribute("position") as THREE.BufferAttribute;
+      for (let i = 0; i < DEBRIS; i++) {
+        debrisVel[i].y -= 1.4 * dt;
+        pos.setXYZ(i, pos.getX(i) + debrisVel[i].x * dt, pos.getY(i) + debrisVel[i].y * dt, pos.getZ(i) + debrisVel[i].z * dt);
+      }
+      pos.needsUpdate = true;
+      debrisMat.opacity = Math.max(0, 1 - dying / 1.3) * f.opacity;
+      debrisMat.size = 0.04 * f.worldScale;
+      if (dying > 1.4) {
+        dying = -2; // gone; waiting to respawn
+        deadFor = 0;
+        boom.visible = debris.visible = false;
+      }
+    } else if (dying === -2) {
+      deadFor += dt;
+      visibility = 0;
+      trailFade = 0;
+      if (deadFor > RESPAWN_AFTER) {
+        // Warp back in, good as new.
+        dying = -1;
+        health = MAX_HEALTH;
+        warp = 0;
+        hitFlash = 1;
+      }
+    } else {
+      warp = Math.min(1, warp + dt * 1.6);
+      visibility = THREE.MathUtils.smoothstep(warp, 0, 1);
+      trailFade = visibility;
+    }
+    ship.visible = visibility > 0.01 || boom.visible;
+    craft.scale.setScalar(dying === -1 ? 0.2 + 0.8 * visibility : 1);
+    trail.visible = trailFade > 0.01;
+    const opacity = f.opacity * visibility;
     // Antenna tip: a quick double blink each second or so.
     const beat = (time * 0.9 + phase) % 1;
     const blink = beat < 0.08 || (beat > 0.16 && beat < 0.24) ? 1 : 0.15;
     tip.scale.setScalar(0.07 + 0.05 * blink);
 
-    for (const m of shaders) m.uniforms.uOpacity.value = f.opacity;
-    tipMat.opacity = f.opacity * blink;
-    flameMat.opacity = f.opacity;
-    underMat.opacity = f.opacity * (0.5 + 0.2 * Math.sin(time * 4 + phase));
+    for (const m of shaders) m.uniforms.uOpacity.value = opacity;
+    tipMat.opacity = opacity * blink;
+    flameMat.opacity = opacity;
+    underMat.opacity = opacity * (0.5 + 0.2 * Math.sin(time * 4 + phase));
 
     for (const m of sparks) {
       const u = m.uniforms;
@@ -458,9 +616,20 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
       u.uAngle.value = angle;
       u.uRadius.value = radius;
       u.uZ.value = zScale;
-      u.uOpacity.value = f.opacity;
+      u.uOpacity.value = opacity;
     }
+    trailMat.uniforms.uOpacity.value = f.opacity * trailFade;
   }
 
-  return { ship, trail, update, setTheme, resize };
+  return {
+    ship,
+    trail,
+    update,
+    setTheme,
+    resize,
+    hit,
+    alive: () => health > 0,
+    health: () => Math.max(health, 0),
+    visibility: () => visibility,
+  };
 }

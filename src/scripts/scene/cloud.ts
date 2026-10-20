@@ -2,13 +2,14 @@ import * as THREE from "three";
 import { clamp, damp, glowTexture, PALETTE, smoothstep } from "./util";
 import { bakeNoise } from "./noise";
 import type { CloudTarget } from "./anchors";
-import { createUfo } from "./ufo";
+import { createUfo, MAX_HEALTH } from "./ufo";
 import { createLightning } from "./lightning";
 
 // A volumetric cumulus, ray-marched on the GPU inside a box. Its shape is a
 // soft union of spheres with a flattened base, eroded by baked 3D noise into
 // billows and wisps, and lit with self-shadowing toward a sun up and to the
-// right. Three little UFOs (AWS, Azure, GCP) orbit it.
+// right. Three little UFOs (AWS, Azure, GCP) orbit it; clicking the cloud
+// throws lightning at them until they're destroyed (they respawn later).
 
 // Sphere lobes in the cloud's local space (x, y, z, radius). A flat-ish row
 // underneath, billows on top, and two lobes front and back for depth.
@@ -364,6 +365,11 @@ export function createCloud(opts: {
     s.p.addScaledVector(s.v, dt);
   };
   const flashRoot = new THREE.Vector3();
+  // UFO targeting.
+  const BOLT_ORIGIN = new THREE.Vector3(0, -0.05, 0); // roughly the cloud's middle, in root space
+  const aim2 = new THREE.Vector3();
+  const pendingHits: { index: number; at: number }[] = [];
+  let lastFrame: CloudFrame | null = null;
   const sunWorld = SUN.clone();
   let storm = 0;
   let stormTime = 0; // seconds of storm left after a click
@@ -531,6 +537,21 @@ export function createCloud(opts: {
     body.position.x = (Math.random() - 0.5) * 0.045 * shake;
     body.position.y += (Math.random() - 0.5) * 0.03 * shake;
 
+    // Lightning aimed at a UFO lands when its stroke arrives.
+    lastFrame = f;
+    for (let i = pendingHits.length - 1; i >= 0; i--) {
+      if (time < pendingHits[i].at) continue;
+      const { index } = pendingHits.splice(i, 1)[0];
+      const destroyed = ufos[index].ufo.hit();
+      shake = 1;
+      const el = opts.labels[index];
+      if (el) {
+        el.classList.remove("is-hit");
+        void el.offsetWidth; // restart the animation
+        el.classList.add(destroyed ? "is-down" : "is-hit");
+      }
+    }
+
     // UFOs: fade while flying behind the cloud.
     fleetVis = damp(fleetVis, fleetTarget, 3, dt);
     orbits.visible = fleetVis > 0.01;
@@ -546,6 +567,7 @@ export function createCloud(opts: {
       behind.push(front < 0.5);
       o.ufo.update({
         time,
+        dt,
         angle,
         radius: o.radius,
         zScale: ORBIT_Z,
@@ -564,25 +586,68 @@ export function createCloud(opts: {
       const x = (tmp.x * 0.5 + 0.5) * f.width;
       const y = (-tmp.y * 0.5 + 0.5) * f.height;
       el.style.transform = `translate3d(${(x + 12).toFixed(1)}px, ${(y - 30).toFixed(1)}px, 0)`;
-      el.style.opacity = (labelsAlpha * (behind[i] ? 0.3 : 1)).toFixed(3);
+      el.style.opacity = (labelsAlpha * o.ufo.visibility() * (behind[i] ? 0.3 : 1)).toFixed(3);
+      // Health bar: one segment per hit point.
+      const hp = o.ufo.health();
+      if (el.dataset.hp !== String(hp)) {
+        el.dataset.hp = String(hp);
+        el.querySelectorAll(".orb-hp i").forEach((seg, k) => seg.classList.toggle("is-empty", k >= hp));
+        if (hp === MAX_HEALTH) el.classList.remove("is-down");
+      }
     });
 
     // How brightly lightning is flashing, so the sky can light up with it.
     return flash;
   }
 
-  // A click (or tap) on the cloud billows it up and sets off a storm: an
-  // immediate strike, then more for the next couple of seconds. Clicking again
-  // keeps it going. (The cloud is wider than tall, hence the squashed distance.)
+  // The live UFO nearest the click on screen, preferring ones in front of the
+  // cloud (a bolt into one hidden behind it would look wrong). -1 if none.
+  function pickTarget(x: number, y: number) {
+    if (!lastFrame || fleetVis < 0.5) return -1;
+    let best = -1;
+    let bestScore = Infinity;
+    ufos.forEach((o, i) => {
+      if (!o.ufo.alive()) return;
+      o.ufo.ship.getWorldPosition(aim2);
+      const hidden = aim2.z < root.position.z;
+      aim2.project(lastFrame!.camera);
+      const sx = (aim2.x * 0.5 + 0.5) * lastFrame!.width;
+      const sy = (-aim2.y * 0.5 + 0.5) * lastFrame!.height;
+      const score = Math.hypot(sx - x, sy - y) + (hidden ? 600 : 0);
+      if (score < bestScore) {
+        bestScore = score;
+        best = i;
+      }
+    });
+    return best;
+  }
+
+  // A click (or tap) on the cloud billows it up and sets off a storm. Each
+  // click also fires an aimed bolt at the nearest UFO, costing it one hit
+  // point; the storm then rumbles on for a couple of seconds. (The cloud is
+  // wider than tall, hence the squashed distance.)
   function poke(x: number, y: number) {
     if (screen.r === 0 || alpha < 0.4) return;
     if (Math.hypot(x - screen.x, (y - screen.y) * 1.6) < screen.r * 0.9) {
       puff = 1;
       stormTime = 2.4;
-      lightning.strikeDown();
-      lightning.strikeSpider();
       shake = 1;
       nextStrike = 0.15;
+      const target = pickTarget(x, y);
+      if (target >= 0 && lastFrame) {
+        // From the cloud's edge, on the side facing the saucer, to the saucer:
+        // the bolt crosses open sky, so it reads against the dark.
+        const to = ufos[target].ufo.ship.getWorldPosition(new THREE.Vector3());
+        root.worldToLocal(to);
+        const from = aim2.copy(to).sub(BOLT_ORIGIN);
+        from.multiplyScalar(1.02 / Math.hypot(from.x / 1.0, from.y / 0.5, from.z / 0.62)).add(BOLT_ORIGIN);
+        const lands = lightning.strikeAt(from.clone(), to);
+        pendingHits.push({ index: target, at: lastFrame.time + lands });
+        lightning.strikeArc(); // a small crackle, so the aimed bolt stays the star
+      } else {
+        lightning.strikeDown();
+        lightning.strikeSpider();
+      }
     }
   }
 

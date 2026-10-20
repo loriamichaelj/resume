@@ -7,8 +7,9 @@ import { glowTexture } from "./util";
 // shifted path before the afterglow cools away. Bolts fork, and their forks
 // fork again. Ground strikes throw sparks and a flare where they land.
 //
-// Three kinds: ground strikes from the base, "spider" lightning crawling
-// across the underside, and arcs skittering around the rim. Each bolt is a
+// Kinds: ground strikes from the base, "spider" lightning crawling across the
+// underside, arcs skittering around the rim, and aimed strikes at a point (the
+// UFOs). Each bolt is a
 // camera-facing ribbon with a white-hot core, a coloured glow and a wide
 // haze. Coordinates are in the cloud's root space (cloud ~2 wide, base
 // around y = -0.55).
@@ -375,6 +376,22 @@ export function createLightning() {
     launch(bolt, from, to, 0.45, false);
   }
 
+  // An aimed bolt from the cloud to a point (a UFO): one quick, bright stroke
+  // with a couple of forks and a single restrike. Returns the seconds until it
+  // lands, so the caller can time the hit.
+  function strikeAt(from: THREE.Vector3, to: THREE.Vector3) {
+    const bolt = freeBolt();
+    const main: Line = { pts: jagged(from, to, 6, 0.24), width: 0.085, t0: 0, t1: 1, level: 0 };
+    bolt.lines = [main, ...forks(main, 1 + Math.floor(Math.random() * 2), 4, true, false)];
+    // Lights the cloud less than a ground strike, so the bolt isn't lost in
+    // the flash.
+    launch(bolt, from, to, 0.45, true);
+    bolt.leader = 0.045;
+    bolt.restrikes = [{ t: 0.13, amp: 0.7, done: false }];
+    bolt.end = 0.45;
+    return bolt.leader;
+  }
+
   function burstSparks(bolt: Bolt) {
     for (const s of bolt.sparkData) {
       s.p.copy(bolt.tip);
@@ -482,5 +499,5 @@ export function createLightning() {
     }
   }
 
-  return { object: group, strikeDown, strikeSpider, strikeArc, update, setTheme };
+  return { object: group, strikeDown, strikeSpider, strikeArc, strikeAt, update, setTheme };
 }
