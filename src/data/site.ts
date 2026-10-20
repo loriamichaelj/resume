@@ -195,11 +195,13 @@ export const skills: SkillGroup[] = [
   {
     label: "Infrastructure as Code",
     items: [
-      "Terraform (Modules, State, Best Practices)",
+      "Terraform / OpenTofu (Modules, State, Terragrunt)",
       "CloudFormation / ARM / Bicep / Deployment Manager",
+      "AWS CDK / Pulumi / Crossplane",
+      "Packer (Golden Images)",
       "Ansible (Playbooks, Roles)",
       "GitOps (ArgoCD, Flux)",
-      "Pulumi / Crossplane",
+      "IaC Scanning (Checkov, tfsec, Trivy)",
     ],
   },
   {
