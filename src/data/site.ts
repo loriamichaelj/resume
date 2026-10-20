@@ -9,9 +9,9 @@ export const profile = {
   role: "Cloud DevOps & Full-Stack Engineer",
   // Short headline used in the hero.
   headline:
-    "I build cloud-native, full-stack applications, from Multi-Cloud infrastructure to the user interface.",
+    "I design, build, test, automate, secure and operate production grade multi cloud systems alongside robust, scalable and resilient containerized deployments using devops principles.",
   // Slightly longer bio for the About section.
-  bio: "Cloud engineer certified in Azure and AWS. I develop full-stack software and contribute to cloud migration end to end. Today I focus on designing multi-cloud infrastructure and building the full-stack apps that run on it.",
+  bio: "Cloud engineer with expertise in AWS, Azure and GCP. I manage cloud infrastructure and develop full-stack software. Today I focus on designing multi-cloud infrastructure and building the full-stack apps that run on it.",
   location: "",
   // Set to "" to hide the email call-to-action.
   email: "mikejloria@gmail.com",
