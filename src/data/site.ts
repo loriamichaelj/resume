@@ -111,18 +111,6 @@ export const experience: Experience[] = [
     tags: ["Azure VNet", "VNet Peering", "NSGs", "Azure CLI", "Bash"],
   },
   {
-    org: "L.A. County Public Defender's Office",
-    role: "Application Developer / Cloud Support Engineer",
-    kind: "work",
-    points: [
-      "Led an end-to-end cloud migration of a production Helpdesk backend from SharePoint Lists to Microsoft SQL Server on Azure for a 1,000+ user county agency, restructuring the schema, rewriting queries, and cutting page load times.",
-      "Maintained and extended a Java / Spring / Angular internal web app that replaced a manual intake process run over email with a single self-service portal for IT tickets and equipment scheduling.",
-      "Designed SQL tables, stored procedures, and REST endpoints consumed by the Angular front end, improving data consistency across modules.",
-      "Translated business needs from nontechnical county staff into requirements, mockups, and shipped features on an Agile / Scrum team of five running weekly sprints.",
-    ],
-    tags: ["Java / Spring", "Angular", "Azure SQL", "REST APIs", "Agile / Scrum"],
-  },
-  {
     org: "California State University, Los Angeles",
     role: "B.S. in Computer Science",
     kind: "education",
