@@ -1,5 +1,5 @@
 ---
-import { profile, socials } from "../data/site";
+import { socials } from "../data/site";
 import Icon from "./Icon.astro";
 ---
 
@@ -26,15 +26,6 @@ import Icon from "./Icon.astro";
         <p class="relative mx-auto mt-5 max-w-xl text-white/60">
           Cloud DevOps Engineer
         </p>
-
-        {
-          profile.email && (
-            <a href={`mailto:${profile.email}`} class="btn-glow group relative mt-9" data-magnetic="0.2">
-              <Icon name="email" class="h-4 w-4" />
-              {profile.email}
-            </a>
-          )
-        }
 
         <ul class="relative mt-10 flex items-center justify-center gap-3">
           {
