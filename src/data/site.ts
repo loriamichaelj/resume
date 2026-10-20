@@ -189,14 +189,14 @@ export const skills: SkillGroup[] = [
       "Azure (VMs, VNet, Entra ID, Storage, Blob, Functions, AKS, ACS, Policy, Blueprints, Cosmos DB, Monitor)",
       "GCP (Compute Engine, VPC, Cloud IAM, Cloud Storage, Cloud SQL, Cloud Functions, GKE, Cloud Run, Cloud DNS, Cloud CDN)",
       "Multi-Cloud / Hybrid Cloud Strategy",
-      "Cloud Networking (VPC Peering, Transit Gateway, ExpressRoute)",
+      "Cloud Networking (VPC Peering, Transit Gateway, ExpressRoute, Cloud Interconnect)",
     ],
   },
   {
     label: "Infrastructure as Code",
     items: [
       "Terraform (Modules, State, Best Practices)",
-      "CloudFormation / ARM / Bicep",
+      "CloudFormation / ARM / Bicep / Deployment Manager",
       "Ansible (Playbooks, Roles)",
       "GitOps (ArgoCD, Flux)",
       "Pulumi / Crossplane",
@@ -208,9 +208,9 @@ export const skills: SkillGroup[] = [
       "Jenkins (Pipelines as Code)",
       "GitHub Actions",
       "GitLab CI / Azure DevOps Pipelines",
-      "AWS CodePipeline + CodeBuild",
+      "AWS CodePipeline + CodeBuild / Google Cloud Build",
       "ArgoCD / Tekton / Harness",
-      "Artifact Management (ECR, ACR, Nexus)",
+      "Artifact Management (ECR, ACR, Artifact Registry, Nexus)",
     ],
   },
   {
@@ -228,7 +228,7 @@ export const skills: SkillGroup[] = [
     items: [
       "Prometheus + Grafana",
       "ELK / Loki Stack",
-      "CloudWatch + Azure Monitor",
+      "CloudWatch + Azure Monitor + Google Cloud Monitoring",
       "OpenTelemetry + Jaeger",
       "Alerting (PagerDuty, Opsgenie)",
       "SLOs / Error Budgets",
@@ -238,8 +238,8 @@ export const skills: SkillGroup[] = [
     label: "Security",
     items: [
       "IAM & Least Privilege",
-      "Secrets Management (Vault, Key Vault)",
-      "Infrastructure Security (GuardDuty, WAF)",
+      "Secrets Management (Vault, Key Vault, Secret Manager)",
+      "Infrastructure Security (GuardDuty, WAF, Security Command Center, Cloud Armor)",
       "Policy as Code (OPA, Kyverno)",
       "Compliance (CIS, SOC 2)",
       "Vulnerability Scanning",
