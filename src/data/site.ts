@@ -165,7 +165,7 @@ export const projects: Project[] = [
     blurb:
       "Observability for cloud workloads: metrics, logs, and traces feeding dashboards and alerts, with SLOs and error budgets so issues are caught before users notice.",
     code: "https://github.com/loriamichaelj",
-    tags: ["Prometheus", "Grafana", "ELK / Loki", "CloudWatch", "Azure Monitor", "OpenTelemetry", "PagerDuty"],
+    tags: ["Prometheus", "Grafana", "ELK / Loki", "CloudWatch", "Azure Monitor", "Cloud Monitoring", "OpenTelemetry", "PagerDuty"],
   },
   {
     title: "Security",
