@@ -4,73 +4,90 @@ import SectionHeading from "./SectionHeading.astro";
 import Icon from "./Icon.astro";
 
 const badge = {
-  project: { label: "Project", class: "bg-rose/15 text-rose" },
-  work: { label: "Work", class: "bg-flame/15 text-flame" },
-  education: { label: "Education", class: "bg-violet/20 text-indigo-300" },
+  project: { label: "Project", class: "bg-rose/15 text-rose ring-rose/30" },
+  work: { label: "Work", class: "bg-flame/15 text-flame ring-flame/30" },
+  education: { label: "Education", class: "bg-violet/20 text-violet ring-violet/30" },
 };
 ---
 
-<section id="experience" class="scroll-mt-24 py-20 sm:py-28">
+<section id="experience" class="relative scroll-mt-24 py-24 sm:py-32">
+  <!-- The 3D cloud drifts at the right edge, behind the cards, while you read. -->
+  <div class="pointer-events-none sticky top-[calc(50vh-9rem)] h-0" aria-hidden="true">
+    <div
+      class="absolute -right-24 top-0 h-[18rem] w-[22rem] sm:-right-16"
+      data-cloud-anchor="2"
+      data-cloud-alpha="0.5"
+    >
+    </div>
+  </div>
+
   <div class="container-px">
-    <SectionHeading eyebrow="02 · Projects and Experience" title="What I've built & learned" />
+    <SectionHeading eyebrow="Projects and Experience" title="What I've built & learned" />
 
-    <ol class="mt-14 space-y-4">
-      {
-        experience.map((item, i) => (
-          <li class="reveal" data-delay={`${i * 80}`}>
-            <article class="card-surface group p-6 transition-transform duration-300 hover:-translate-y-0.5 sm:p-8">
-              <div class="grid gap-5 sm:grid-cols-[10rem_1fr] sm:gap-8">
-                <div class="flex flex-col gap-2">
-                  <span class={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${badge[item.kind].class}`}>
-                    {badge[item.kind].label}
-                  </span>
-                  {item.location && (
-                    <span class="text-xs text-white/35">{item.location}</span>
-                  )}
-                </div>
+    <div class="relative mt-16" data-timeline>
+      <div class="timeline-rail" aria-hidden="true"><span class="timeline-fill"></span></div>
 
-                <div>
-                  <h3 class="font-display text-xl font-semibold text-white">
-                    {item.org}
-                  </h3>
-                  <p class="mt-0.5 text-sm font-medium text-white/55">{item.role}</p>
+      <ol class="space-y-6">
+        {
+          experience.map((item) => (
+            <li class="timeline-item reveal relative pl-10 sm:pl-16" data-reveal="right">
+              <span class="timeline-dot" aria-hidden="true" />
+              <article class="card-surface group p-6 sm:p-8" data-tilt="4">
+                <div class="grid gap-5 sm:grid-cols-[9rem_1fr] sm:gap-8">
+                  <div class="flex flex-row items-center gap-3 sm:flex-col sm:items-start">
+                    <span class={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1 ${badge[item.kind].class}`}>
+                      {badge[item.kind].label}
+                    </span>
+                    {item.period && <span class="font-mono text-xs text-white/55">{item.period}</span>}
+                    {item.location && <span class="text-xs text-white/40">{item.location}</span>}
+                  </div>
 
-                  <ul class="mt-4 space-y-2.5">
-                    {item.points.map((p) => (
-                      <li class="flex gap-3 text-sm leading-relaxed text-white/65">
-                        <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-rose" />
-                        {p}
-                      </li>
-                    ))}
-                  </ul>
+                  <div>
+                    <h3 class="font-display text-2xl font-semibold text-white">
+                      {item.org}
+                    </h3>
+                    <p class="mt-1 text-sm font-medium">
+                      <span class="text-gradient">{item.role}</span>
+                    </p>
 
-                  {item.tags && (
-                    <ul class="mt-5 flex flex-wrap gap-2">
-                      {item.tags.map((t) => (
-                        <li class="rounded-full border border-white/10 px-3 py-1 text-xs text-white/55">
-                          {t}
+                    <ul class="mt-5 space-y-3">
+                      {item.points.map((p) => (
+                        <li class="flex gap-3 text-sm leading-relaxed text-white/65">
+                          <span class="mt-[0.45rem] h-1.5 w-1.5 shrink-0 rotate-45 rounded-[2px] bg-brand-gradient" />
+                          {p}
                         </li>
                       ))}
                     </ul>
-                  )}
 
-                  {item.link && (
-                    <a
-                      href={item.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="mt-5 inline-flex items-center gap-2 text-sm font-medium text-white/80 transition-colors hover:text-white"
-                    >
-                      <Icon name="github" class="h-4 w-4" />
-                      View on GitHub
-                    </a>
-                  )}
+                    {item.tags && (
+                      <ul class="mt-6 flex flex-wrap gap-2">
+                        {item.tags.map((t) => (
+                          <li class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-white/60 transition-colors hover:border-white/30 hover:text-white">
+                            {t}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {item.link && (
+                      <a
+                        href={item.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="group/link mt-6 inline-flex items-center gap-2 text-sm font-medium text-white/80 transition-colors hover:text-white"
+                      >
+                        <Icon name="github" class="h-4 w-4" />
+                        View on GitHub
+                        <Icon name="arrow" class="h-3.5 w-3.5 transition-transform group-hover/link:translate-x-1" />
+                      </a>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </article>
-          </li>
-        ))
-      }
-    </ol>
+              </article>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
   </div>
 </section>

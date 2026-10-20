@@ -11,14 +11,15 @@ export default {
         ink: {
           950: "rgb(var(--c-ink-950) / <alpha-value>)",
           900: "rgb(var(--c-ink-900) / <alpha-value>)",
-          850: "#111114",
-          800: "#17171c",
-          700: "#22222a",
-          600: "#2e2e38",
         },
-        flame: "#f4492f",
-        rose: "#f367a5",
-        violet: "#553deb",
+        // Brand palette as theme variables (see global.css). Dark: aqua ->
+        // violet -> rose -> peach, flame as a warm accent. Light: the same slots
+        // hold an amber -> orange -> rose sunset.
+        aqua: "rgb(var(--c-aqua) / <alpha-value>)",
+        violet: "rgb(var(--c-violet) / <alpha-value>)",
+        rose: "rgb(var(--c-rose) / <alpha-value>)",
+        peach: "rgb(var(--c-peach) / <alpha-value>)",
+        flame: "rgb(var(--c-flame) / <alpha-value>)",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
@@ -29,27 +30,31 @@ export default {
         content: "1180px",
       },
       backgroundImage: {
-        "brand-gradient":
-          "linear-gradient(227.58deg, #f4492f -44.04%, #f367a5 42.36%, #553deb 113.95%)",
+        // Theme-aware: the light theme swaps in deeper stops for contrast.
+        "brand-gradient": "var(--brand-gradient)",
       },
       keyframes: {
-        "fade-up": {
-          "0%": { opacity: "0", transform: "translateY(20px)" },
-          "100%": { opacity: "1", transform: "translateY(0)" },
-        },
         float: {
           "0%, 100%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(-10px)" },
+          "50%": { transform: "translateY(-12px)" },
         },
         "gradient-pan": {
           "0%, 100%": { backgroundPosition: "0% 50%" },
           "50%": { backgroundPosition: "100% 50%" },
         },
+        "spin-border": {
+          to: { "--border-angle": "360deg" },
+        },
+        "ping-soft": {
+          "0%": { transform: "scale(1)", opacity: "0.7" },
+          "100%": { transform: "scale(2.6)", opacity: "0" },
+        },
       },
       animation: {
-        "fade-up": "fade-up 0.7s ease forwards",
-        float: "float 6s ease-in-out infinite",
+        float: "float 7s ease-in-out infinite",
         "gradient-pan": "gradient-pan 8s ease infinite",
+        "spin-border": "spin-border 6s linear infinite",
+        "ping-soft": "ping-soft 2.2s cubic-bezier(0, 0, 0.2, 1) infinite",
       },
     },
   },

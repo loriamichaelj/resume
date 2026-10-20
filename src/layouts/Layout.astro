@@ -1,6 +1,8 @@
 ---
 import "../styles/global.css";
 import { profile } from "../data/site";
+import Scene3D from "../components/Scene3D.astro";
+import { withBase } from "../lib/url";
 
 interface Props {
   title?: string;
@@ -19,6 +21,7 @@ const {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="generator" content={Astro.generator} />
+    <meta name="theme-color" content="#060614" />
 
     <!-- Apply the saved/system theme before first paint to avoid a flash. -->
     <script is:inline>
@@ -33,7 +36,9 @@ const {
         } catch {}
       })();
     </script>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23f4492f'/%3E%3Cstop offset='0.5' stop-color='%23f367a5'/%3E%3Cstop offset='1' stop-color='%23553deb'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='22' fill='%2308080a'/%3E%3Ctext x='50' y='68' font-family='monospace' font-size='52' font-weight='700' text-anchor='middle' fill='url(%23g)'%3EM%3C/text%3E%3C/svg%3E" />
+    <link rel="icon" href={withBase("favicon.svg")} type="image/svg+xml" />
+    <link rel="icon" href={withBase("favicon-32.png")} sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href={withBase("apple-touch-icon.png")} />
 
     <title>{title}</title>
     <meta name="description" content={description} />
@@ -53,34 +58,30 @@ const {
       Skip to content
     </a>
 
+    <!-- Scroll progress -->
+    <div
+      id="scroll-progress"
+      class="pointer-events-none fixed inset-x-0 top-0 z-50 h-[2px] origin-left bg-brand-gradient"
+      style="transform: scaleX(0)"
+      aria-hidden="true"
+    >
+    </div>
+
+    <!-- Soft light that trails the cursor (desktop only, set by motion.ts) -->
+    <div
+      id="cursor-glow"
+      class="pointer-events-none fixed left-0 top-0 -z-[1] h-[34rem] w-[34rem] rounded-full opacity-0 transition-opacity duration-700"
+      style="background: radial-gradient(circle, rgb(var(--c-orb-1) / 0.16), rgb(var(--c-orb-2) / 0.06) 40%, transparent 70%)"
+      aria-hidden="true"
+    >
+    </div>
+
+    <Scene3D />
+
     <slot />
 
     <script>
-      // Scroll reveal: adds .is-visible to .reveal elements as they enter view.
-      const reveals = document.querySelectorAll<HTMLElement>(".reveal");
-      const prefersReduced = window.matchMedia(
-        "(prefers-reduced-motion: reduce)",
-      ).matches;
-
-      if (prefersReduced || !("IntersectionObserver" in window)) {
-        reveals.forEach((el) => el.classList.add("is-visible"));
-      } else {
-        const io = new IntersectionObserver(
-          (entries) => {
-            entries.forEach((entry) => {
-              if (entry.isIntersecting) {
-                const el = entry.target as HTMLElement;
-                const delay = el.dataset.delay;
-                if (delay) el.style.transitionDelay = `${delay}ms`;
-                el.classList.add("is-visible");
-                io.unobserve(el);
-              }
-            });
-          },
-          { threshold: 0.12, rootMargin: "0px 0px -8% 0px" },
-        );
-        reveals.forEach((el) => io.observe(el));
-      }
+      import "../scripts/motion";
     </script>
   </body>
 </html>

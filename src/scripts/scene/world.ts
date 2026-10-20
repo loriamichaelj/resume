@@ -1,0 +1,308 @@
+import * as THREE from "three";
+import { CloudPath } from "./anchors";
+import { createAurora } from "./aurora";
+import { createCloud } from "./cloud";
+import { createNetwork, NETWORK_COLORS } from "./network";
+import { createStars } from "./stars";
+import { createSky } from "./sky";
+import { createConstellations } from "./constellations";
+import { createSkyClouds } from "./skyclouds";
+import { clamp, damp } from "./util";
+import { onFrame } from "../ticker";
+
+// How far (world units) the background column travels over the full page
+// scroll. Smaller than the page itself, so the backdrop parallaxes behind it.
+const SPAN = 36;
+const CAMERA_Z = 10;
+
+export function createWorld(canvas: HTMLCanvasElement) {
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const coarse = matchMedia("(pointer: coarse)").matches;
+  const lowPower = coarse || (navigator.hardwareConcurrency ?? 8) <= 4;
+  const isLight = () => document.documentElement.classList.contains("light");
+
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    alpha: true,
+    antialias: true,
+    powerPreference: "high-performance",
+  });
+  // Colour management is off (see util.ts): no output conversion either.
+  renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+  renderer.setClearColor(0x000000, 0);
+  // The backdrop is soft, so it doesn't need full retina resolution.
+  const maxRatio = Math.min(window.devicePixelRatio, lowPower ? 1.25 : 1.5);
+  let ratio = maxRatio;
+  renderer.setPixelRatio(ratio);
+
+  if (reduceMotion) {
+    canvas.classList.add("is-static");
+    document.documentElement.classList.add("webgl-static");
+  }
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
+  camera.position.set(0, 0, CAMERA_Z);
+
+  // ---- Layers ----------------------------------------------------------------
+  const light = isLight();
+  const aurora = createAurora({ light });
+  scene.add(aurora.object);
+
+  // Everything in `column` scrolls (slower than the page) as you move down.
+  const column = new THREE.Group();
+  scene.add(column);
+
+  const stars = createStars({ lowPower, span: SPAN, light });
+  column.add(stars.object);
+
+  // Moon (dark) or sun (light), top right above the hero.
+  const sky = createSky({ light });
+  column.add(sky.object);
+  scene.add(camera); // the sun's lens flare rides on the camera
+  sky.attach(camera);
+
+
+  const networkA = createNetwork({
+    nodes: lowPower ? 22 : 34,
+    seed: 3,
+    radius: [3.2, 2.3, 1.8],
+    colors: NETWORK_COLORS.coolWarm,
+    light,
+  });
+  const networkB = createNetwork({
+    nodes: lowPower ? 18 : 28,
+    seed: 11,
+    radius: [2.8, 2.2, 1.6],
+    colors: NETWORK_COLORS.warmCool,
+    light,
+  });
+  const networkC = createNetwork({
+    nodes: lowPower ? 16 : 24,
+    seed: 23,
+    radius: [2.6, 2.0, 1.5],
+    colors: NETWORK_COLORS.coolWarm,
+    light,
+  });
+  column.add(networkA.object, networkB.object, networkC.object);
+
+  // Night: real constellations. Day: small drifting clouds instead.
+  const constellations = createConstellations({ span: SPAN });
+  const skyClouds = createSkyClouds({ count: lowPower ? 8 : 14, span: SPAN });
+  column.add(constellations.object, skyClouds.object);
+  let night = light ? 0 : 1;
+
+  // Labels are fixed to the viewport, so a static (reduced motion) canvas that
+  // scrolls away with the page doesn't get them.
+  const labels = reduceMotion ? [] : Array.from(document.querySelectorAll<HTMLElement>("[data-orb]"));
+  // Under reduced motion the still frame is redrawn once the cloud can show.
+  const cloud = createCloud({ lowPower, light, labels, onReady: () => reduceMotion && renderStatic() });
+  scene.add(cloud.object);
+
+  const path = new CloudPath();
+
+  // ---- Layout ------------------------------------------------------------------
+  let width = 1;
+  let height = 1;
+
+  // Park each network beside the section it belongs to, in the side margin.
+  function placeNetworks() {
+    const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    const at = (id: string) => {
+      const el = document.getElementById(id);
+      if (!el) return 0.5;
+      const mid = el.offsetTop + el.offsetHeight / 2 - window.innerHeight / 2;
+      return clamp(mid / maxScroll);
+    };
+    const tanHalf = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    const halfW = (z: number) => tanHalf * (CAMERA_Z - z) * camera.aspect;
+    networkA.object.position.set(halfW(-6) * 0.62, -at("experience") * SPAN, -6);
+    networkB.object.position.set(-halfW(-7) * 0.6, -at("skills") * SPAN, -7);
+    networkC.object.position.set(-halfW(-8) * 0.62, -at("about") * SPAN - 1, -8);
+  }
+
+  function resize() {
+    width = canvas.clientWidth || window.innerWidth;
+    height = canvas.clientHeight || window.innerHeight;
+    renderer.setSize(width, height, false);
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    const px = height * renderer.getPixelRatio();
+    stars.resize(px, camera.fov);
+    networkA.resize(px, camera.fov);
+    networkB.resize(px, camera.fov);
+    networkC.resize(px, camera.fov);
+    constellations.resize(px, camera.fov);
+    constellations.layout(camera);
+    skyClouds.layout(camera);
+    cloud.resize(px, camera.fov);
+    aurora.resize(width, height);
+    sky.layout(camera);
+    placeNetworks();
+  }
+  resize();
+  new ResizeObserver(resize).observe(canvas);
+  window.addEventListener("load", placeNetworks);
+
+  // ---- Input -------------------------------------------------------------------
+  const pointer = { x: 0, y: 0, nx: 0, ny: 0, active: false };
+  window.addEventListener(
+    "pointermove",
+    (e) => {
+      pointer.x = e.clientX;
+      pointer.y = e.clientY;
+      pointer.nx = (e.clientX / window.innerWidth) * 2 - 1;
+      pointer.ny = (e.clientY / window.innerHeight) * 2 - 1;
+      pointer.active = e.pointerType === "mouse";
+    },
+    { passive: true },
+  );
+  document.documentElement.addEventListener("pointerleave", () => (pointer.active = false));
+  window.addEventListener("pointerdown", (e) => cloud.poke(e.clientX, e.clientY), { passive: true });
+
+  // ---- Theme -------------------------------------------------------------------
+  function applyTheme() {
+    const l = isLight();
+    for (const layer of [aurora, stars, networkA, networkB, networkC, cloud, sky]) layer.setTheme(l);
+    if (reduceMotion) renderStatic();
+  }
+  new MutationObserver(applyTheme).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
+
+  // ---- Frame -------------------------------------------------------------------
+  let time = 0;
+  let lastScroll = window.scrollY;
+  let scrollVel = 0;
+  let progress = 0;
+  let roll = 0;
+
+  // The canvas is fixed at the viewport origin (except under reduced motion).
+  const fixedRect = new DOMRect(0, 0, 0, 0);
+  const lightDir = new THREE.Vector3();
+  const smoothLight = new THREE.Vector3(0.45, 0.85, 0.4).normalize();
+
+  function step(dt: number, animate: boolean) {
+    time += dt;
+    const sy = window.scrollY;
+    scrollVel = damp(scrollVel, (sy - lastScroll) / Math.max(dt, 1e-3), 6, dt);
+    lastScroll = sy;
+
+    // Scroll is already smoothed by Lenis (or native touch), so use it as is:
+    // extra damping here would make the backdrop lag behind the page.
+    const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    progress = animate ? clamp(sy / maxScroll) : 0;
+    column.position.y = progress * SPAN;
+
+    // Pointer parallax, a gentle dolly mid-page and a roll with scroll speed.
+    camera.position.x = damp(camera.position.x, pointer.nx * 0.5, 2.5, dt);
+    camera.position.y = damp(camera.position.y, -pointer.ny * 0.35, 2.5, dt);
+    camera.position.z = CAMERA_Z - Math.sin(progress * Math.PI) * 1.2;
+    camera.lookAt(0, 0, -2);
+    roll = damp(roll, clamp(scrollVel / 9000, -0.05, 0.05), 4, dt);
+    camera.rotateZ(roll);
+    camera.updateMatrixWorld();
+
+    // Light the cloud from the sun or moon. Keep the light in front of the
+    // cloud (the bodies sit far behind it) and from above, so its face stays
+    // lit, and ease toward it as things move.
+    sky.update(time, dt, camera);
+    sky.lightPosition(lightDir).sub(cloud.object.position);
+    lightDir.z = Math.max(lightDir.z, lightDir.length() * 0.6);
+    lightDir.y = Math.max(lightDir.y, lightDir.length() * 0.25);
+    lightDir.normalize();
+    smoothLight.lerp(lightDir, 1 - Math.exp(-3 * dt)).normalize();
+    cloud.setLightDir(smoothLight);
+
+    const rect = reduceMotion ? canvas.getBoundingClientRect() : fixedRect;
+    const target = path.sample(rect, window.innerHeight);
+    const flash = cloud.update({
+      dt,
+      time,
+      target,
+      scrollVel,
+      pointer,
+      camera,
+      width,
+      height,
+    });
+    stars.update(time, scrollVel);
+    night = damp(night, isLight() ? 0 : 1, 2.5, dt);
+    networkA.update(time, night);
+    networkB.update(time * 0.9 + 10, night);
+    networkC.update(time * 1.1 + 20, night);
+    constellations.update(time, night);
+    skyClouds.update(time, dt, 1 - night);
+    aurora.update(time, target?.section ?? 0, dt, flash);
+
+    renderer.render(scene, camera);
+  }
+
+  // Reduced motion: a single still frame of the hero, re-drawn only on resize
+  // or theme change. The canvas scrolls away with the page (.is-static).
+  function renderStatic() {
+    // Several settling steps so the damped values land on their targets.
+    for (let i = 0; i < 90; i++) step(1 / 30, false);
+  }
+
+  // Adaptive resolution: if frames run long for a second, render the backdrop
+  // at a lower pixel ratio; step back up after a sustained smooth stretch.
+  let slow = 0;
+  let smooth = 0;
+  function adapt(dt: number) {
+    if (dt > 1 / 45) {
+      slow += dt;
+      smooth = 0;
+    } else {
+      smooth += dt;
+      slow = Math.max(0, slow - dt * 0.5);
+    }
+    if (slow > 1 && ratio > 0.75) {
+      ratio = Math.max(0.75, ratio - 0.25);
+      renderer.setPixelRatio(ratio);
+      resize();
+      slow = 0;
+    } else if (smooth > 8 && ratio < maxRatio) {
+      ratio = Math.min(maxRatio, ratio + 0.25);
+      renderer.setPixelRatio(ratio);
+      resize();
+      smooth = 0;
+    }
+  }
+
+  let running = false;
+  function start() {
+    running = true;
+  }
+  function stop() {
+    running = false;
+  }
+  // Runs after smooth scrolling and DOM motion in the shared frame loop.
+  onFrame((_, dt) => {
+    if (!running || document.hidden) return;
+    step(dt, true);
+    adapt(dt);
+  }, 10);
+
+  if (reduceMotion) {
+    renderStatic();
+    new ResizeObserver(() => renderStatic()).observe(canvas);
+  } else {
+    // Compile every shader up front (off the main thread where supported), so
+    // layers further down the page don't hitch the first time they appear.
+    renderer
+      .compileAsync(scene, camera)
+      .catch(() => {})
+      .then(start);
+  }
+
+  canvas.addEventListener("webglcontextlost", (e) => {
+    e.preventDefault();
+    stop();
+    document.documentElement.classList.remove("webgl");
+  });
+
+  // Fade the canvas in (and the CSS fallbacks out) once the first frame is drawn.
+  requestAnimationFrame(() => document.documentElement.classList.add("webgl"));
+}

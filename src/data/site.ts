@@ -18,6 +18,37 @@ export const profile = {
   resumeUrl: "", // optional: link to a downloadable PDF in /public
 };
 
+// Rotating line under the name in the hero: "<prefix> <word> <suffix>".
+export const heroRotator = {
+  prefix: "Building",
+  words: ["secure", "resilient", "automated", "scalable", "observable"],
+  suffix: "cloud platforms.",
+};
+
+// Short tool names for the scrolling band under the hero.
+export const marquee: string[] = [
+  "AWS",
+  "Azure",
+  "GCP",
+  "Terraform",
+  "Kubernetes",
+  "Docker",
+  "Helm",
+  "ArgoCD",
+  "GitHub Actions",
+  "Packer",
+  "Ansible",
+  "Prometheus",
+  "Grafana",
+  "OpenTelemetry",
+  "Datadog",
+  "Vault",
+  "Istio",
+  "FastAPI",
+  "React",
+  "PostgreSQL",
+];
+
 export type Social = {
   label: string;
   href: string;
@@ -54,6 +85,8 @@ export type Experience = {
   org: string;
   role: string;
   location?: string;
+  // Optional dates, shown under the badge (e.g. "2018 – 2022").
+  period?: string;
   kind: "project" | "work" | "education";
   // Optional repository link, shown on project entries.
   link?: string;
@@ -138,18 +171,33 @@ export const experience: Experience[] = [
   },
   {
     org: "California State University, Los Angeles",
-    role: "B.S. in Computer Science",
+    role: "Bachelor of Science in Computer Science",
+    period: "2018 – 2022",
+    location: "Los Angeles, CA",
     kind: "education",
     points: [
-      "Coursework: Data Structures, Algorithms, Software Engineering, Database Management, Operating Systems, Internet Architecture, Network Protocols, Cryptography, Cloud Computing, and Machine Learning.",
-      "IEEE member and Calculus tutor.",
+      "Systems and networking: Operating Systems, Internet Architecture, and Network Protocols.",
+      "Algorithms and security: Data Structures, Algorithms, and Cryptography.",
+      "Software and data: Software Engineering and Database Management.",
+      "Cloud and AI: Cloud Computing and Machine Learning.",
     ],
-    tags: ["Algorithms", "Databases", "Cryptography", "Cloud Computing", "Machine Learning"],
+    tags: [
+      "Operating Systems",
+      "Networking",
+      "Algorithms",
+      "Cryptography",
+      "Software Engineering",
+      "Databases",
+      "Cloud Computing",
+      "Machine Learning",
+    ],
   },
 ];
 
 export type Project = {
   title: string;
+  // key maps to an inline SVG icon in the Icon component.
+  icon: "cloud-cog" | "container" | "layers" | "code-xml" | "chart-line" | "shield-check";
   period?: string;
   blurb: string;
   code: string;
@@ -160,6 +208,7 @@ export type Project = {
 export const projects: Project[] = [
   {
     title: "AWS, Azure and GCP Cloud Infrastructure",
+    icon: "cloud-cog",
     blurb:
       "Multi-cloud and hybrid infrastructure on AWS, Azure, and GCP: compute, identity, storage, and serverless, connected through VPC peering, Transit Gateway, and ExpressRoute.",
     code: "https://github.com/loriamichaelj",
@@ -167,6 +216,7 @@ export const projects: Project[] = [
   },
   {
     title: "Containerized Deployment",
+    icon: "container",
     blurb:
       "Containerizing applications with Docker and running them on Kubernetes with Helm across EKS, AKS, and GKE, with images stored in ECR, ACR, or Artifact Registry and releases delivered through GitOps.",
     code: "https://github.com/loriamichaelj",
@@ -174,6 +224,7 @@ export const projects: Project[] = [
   },
   {
     title: "Infrastructure as Code",
+    icon: "layers",
     blurb:
       "Defining cloud environments as code with reusable Terraform modules and managed state, CloudFormation and Bicep templates, and Ansible playbooks, shipped through CI/CD pipelines.",
     code: "https://github.com/loriamichaelj",
@@ -181,6 +232,7 @@ export const projects: Project[] = [
   },
   {
     title: "Full-Stack Web Development",
+    icon: "code-xml",
     blurb:
       "End-to-end web application development, from well-structured REST APIs and backend services to responsive, component-driven front ends, deployed to the cloud through automated pipelines.",
     code: "https://github.com/loriamichaelj",
@@ -188,6 +240,7 @@ export const projects: Project[] = [
   },
   {
     title: "Monitoring",
+    icon: "chart-line",
     blurb:
       "Observability for cloud workloads: metrics, logs, and traces feeding dashboards and alerts, with SLOs and error budgets so issues are caught before users notice.",
     code: "https://github.com/loriamichaelj",
@@ -195,6 +248,7 @@ export const projects: Project[] = [
   },
   {
     title: "Security",
+    icon: "shield-check",
     blurb:
       "Hardening cloud environments with least-privilege IAM, centralized secrets, threat detection, policy as code, and vulnerability scanning aligned to CIS benchmarks.",
     code: "https://github.com/loriamichaelj",

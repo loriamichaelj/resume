@@ -4,6 +4,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Registered so they can be transitioned / animated (cursor spotlight and the
+   rotating gradient border). Browsers without @property just snap. */
+@property --spot {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+@property --border-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
 @layer base {
   /* Theme tokens. :root is the dark default; .light (set on <html> by the
      no-flash script in Layout.astro) overrides them. Values are space-separated
@@ -11,26 +24,55 @@
   :root {
     color-scheme: dark;
     --c-fg: 255 255 255; /* foreground / text  -> Tailwind `white` */
-    --c-ink-950: 8 8 10; /* page background    -> Tailwind `ink-950` */
-    --c-ink-900: 12 12 15; /* elevated card bg  -> Tailwind `ink-900` */
+    --c-ink-950: 6 6 20; /* page background    -> Tailwind `ink-950` */
+    --c-ink-900: 14 13 34; /* elevated card bg  -> Tailwind `ink-900` */
     --c-edge: 255 255 255; /* hairline / card-border highlight */
-    --c-orb-1: 85 61 235; /* backdrop gradient orbs */
-    --c-orb-2: 243 103 165;
+    --c-orb-1: 123 97 255; /* fallback backdrop orbs (no WebGL) */
+    --c-orb-2: 255 95 162;
+    --c-orb-3: 56 217 255;
+    --c-spot: 160 140 255; /* cursor spotlight on cards */
+    /* Brand colour slots -> Tailwind aqua / violet / rose / peach / flame. */
+    --c-aqua: 56 217 255;
+    --c-violet: 123 97 255;
+    --c-rose: 255 95 162;
+    --c-peach: 255 179 107;
+    --c-flame: 255 120 73;
+    --brand-gradient: linear-gradient(
+      110deg,
+      rgb(var(--c-aqua)) 0%,
+      rgb(var(--c-violet)) 34%,
+      rgb(var(--c-rose)) 68%,
+      rgb(var(--c-peach)) 100%
+    );
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   }
 
+  /* Light: a warm, sunlit orange scheme. */
   :root.light {
     color-scheme: light;
-    --c-fg: 24 24 27; /* near-black body text */
-    --c-ink-950: 247 248 250; /* off-white page */
+    --c-fg: 67 32 12; /* deep warm brown body text */
+    --c-ink-950: 255 247 237; /* warm cream page */
     --c-ink-900: 255 255 255; /* white cards, elevated above the page */
-    --c-edge: 9 9 11; /* dark hairlines on light surfaces */
-    --c-orb-1: 99 102 241;
-    --c-orb-2: 244 114 182;
+    --c-edge: 124 45 18; /* warm hairlines on light surfaces */
+    --c-orb-1: 251 146 60;
+    --c-orb-2: 244 63 94;
+    --c-orb-3: 253 186 116;
+    --c-spot: 249 115 22;
+    --c-aqua: 217 119 6; /* amber */
+    --c-violet: 249 115 22; /* orange */
+    --c-rose: 234 88 12; /* deep orange */
+    --c-peach: 225 29 72; /* rose */
+    --c-flame: 220 38 38; /* red-orange */
   }
 
   html {
     scroll-behavior: smooth;
     scroll-padding-top: 6rem;
+    overflow-x: clip;
+  }
+  /* Lenis drives the scroll itself; native smooth scrolling would fight it. */
+  html.lenis {
+    scroll-behavior: auto;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -41,24 +83,33 @@
 
   body {
     @apply bg-ink-950 text-white/90 font-sans antialiased;
+    overflow-x: clip;
   }
 
-  /* Fixed gradient backdrop via a pseudo-element instead of
-     background-attachment: fixed, which is janky on mobile (esp. iOS). */
+  /* Fallback gradient backdrop, shown until (or instead of) the WebGL scene.
+     A pseudo-element instead of background-attachment: fixed, which is janky
+     on mobile (esp. iOS). */
   body::before {
     content: "";
     position: fixed;
     inset: 0;
-    z-index: -1;
+    z-index: -3;
     pointer-events: none;
     background-image:
-      radial-gradient(60rem 40rem at 75% -10%, rgb(var(--c-orb-1) / 0.16), transparent 60%),
-      radial-gradient(50rem 35rem at 0% 10%, rgb(var(--c-orb-2) / 0.12), transparent 55%);
+      radial-gradient(60rem 40rem at 80% -10%, rgb(var(--c-orb-1) / 0.22), transparent 60%),
+      radial-gradient(50rem 35rem at 0% 15%, rgb(var(--c-orb-2) / 0.14), transparent 55%),
+      radial-gradient(45rem 30rem at 50% 110%, rgb(var(--c-orb-3) / 0.12), transparent 60%);
+    transition: opacity 1.2s ease;
+  }
+  /* The scene's aurora takes over, except under reduced motion, where the
+     canvas is a still frame of the hero only. */
+  html.webgl:not(.webgl-static) body::before {
+    opacity: 0.35;
   }
 
   ::selection {
-    background: rgba(243, 103, 165, 0.35);
-    color: rgb(var(--c-ink-950));
+    background: rgb(var(--c-rose) / 0.35);
+    color: rgb(var(--c-fg));
   }
 }
 
@@ -68,11 +119,15 @@
   }
 
   .eyebrow {
-    @apply font-mono text-xs uppercase tracking-[0.25em] text-white/45;
+    @apply font-mono text-xs uppercase tracking-[0.25em] text-white/50;
   }
 
   .text-gradient {
-    @apply bg-brand-gradient bg-clip-text text-transparent;
+    background-image: var(--brand-gradient);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   /* Theme toggle: show the icon for the mode you'll switch TO. */
@@ -86,9 +141,64 @@
     display: none;
   }
 
-  /* Thin gradient border using a masked pseudo-element. */
+  /* ---------------------------------------------------------------------------
+     WebGL canvas + DOM overlays that track 3D objects
+     ------------------------------------------------------------------------ */
+  .scene-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    width: 100%;
+    height: 100lvh;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 1.4s ease;
+  }
+  html.webgl .scene-canvas {
+    opacity: 1;
+  }
+  /* Reduced motion: a still frame at the top of the page that scrolls away. */
+  .scene-canvas.is-static {
+    position: absolute;
+  }
+
+  .orb-label {
+    @apply absolute left-0 top-0 rounded-full border border-white/20 bg-ink-950/80 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-white/90;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    will-change: transform, opacity;
+  }
+
+  /* No-WebGL stand-in for the hero cloud. */
+  .cloud-fallback {
+    transition: opacity 1s ease;
+  }
+  html.webgl .cloud-fallback {
+    opacity: 0;
+  }
+
+  /* ---------------------------------------------------------------------------
+     Cards with a gradient hairline and a cursor-following spotlight.
+     --mx / --my / --spot are set by src/scripts/motion.ts. No backdrop blur:
+     re-blurring the animated canvas behind every card each frame is what makes
+     scrolling stutter. .card-clear drops the fill entirely.
+     ------------------------------------------------------------------------ */
   .card-surface {
-    @apply relative rounded-2xl bg-ink-900/70 backdrop-blur-sm;
+    @apply relative rounded-[1.25rem];
+    --mx: 50%;
+    --my: 50%;
+    background: rgb(var(--c-ink-900) / 0.42);
+    transition: --spot 0.45s ease;
+  }
+  :root.light .card-surface {
+    background: rgb(var(--c-ink-900) / 0.5);
+    box-shadow: 0 20px 50px -30px rgb(80 60 200 / 0.35);
+  }
+  /* Fully transparent: just the hairline outline (and spotlight) remain. */
+  .card-clear,
+  :root.light .card-clear {
+    background: transparent;
+    box-shadow: none;
   }
   .card-surface::before {
     content: "";
@@ -96,47 +206,308 @@
     inset: 0;
     border-radius: inherit;
     padding: 1px;
-    background: linear-gradient(
-      150deg,
-      rgb(var(--c-edge) / 0.14),
-      rgb(var(--c-edge) / 0.02) 40%,
-      rgba(85, 61, 235, 0.18)
-    );
+    background:
+      radial-gradient(
+        22rem circle at var(--mx) var(--my),
+        rgb(var(--c-spot) / calc(0.85 * var(--spot))),
+        transparent 45%
+      ),
+      linear-gradient(
+        150deg,
+        rgb(var(--c-edge) / 0.16),
+        rgb(var(--c-edge) / 0.03) 40%,
+        rgb(var(--c-violet) / 0.25)
+      );
     -webkit-mask:
       linear-gradient(#000 0 0) content-box,
       linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
-    transition: background 0.4s ease;
   }
-  .card-surface:hover::before {
-    background: linear-gradient(
-      150deg,
-      rgba(244, 73, 47, 0.5),
-      rgba(243, 103, 165, 0.4) 50%,
-      rgba(85, 61, 235, 0.5)
+  .card-surface::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+      26rem circle at var(--mx) var(--my),
+      rgb(var(--c-spot) / calc(0.1 * var(--spot))),
+      transparent 50%
     );
   }
 
-  /* Scroll-reveal: elements start hidden, .is-visible is added by IntersectionObserver. */
+  /* 3D tilt (transform set inline by motion.ts). */
+  [data-tilt] {
+    transition:
+      transform 0.6s var(--ease-out),
+      --spot 0.45s ease;
+  }
+  [data-tilt].is-tilting {
+    will-change: transform;
+    transition:
+      transform 0.12s linear,
+      --spot 0.45s ease;
+  }
+
+  /* ---------------------------------------------------------------------------
+     Scroll reveal. Elements start hidden; motion.ts adds .is-visible.
+     data-reveal picks the entrance: up (default), left, right, scale, flip.
+     ------------------------------------------------------------------------ */
   .reveal {
     opacity: 0;
-    transform: translateY(22px);
+    transform: translate3d(0, 30px, 0);
     transition:
-      opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: opacity, transform;
+      opacity 0.9s var(--ease-out),
+      transform 0.9s var(--ease-out);
+  }
+  .reveal[data-reveal="left"] {
+    transform: translate3d(-48px, 0, 0);
+  }
+  .reveal[data-reveal="right"] {
+    transform: translate3d(48px, 0, 0);
+  }
+  .reveal[data-reveal="scale"] {
+    transform: scale(0.9);
+  }
+  .reveal[data-reveal="flip"] {
+    transform: perspective(1000px) rotateX(22deg) translate3d(0, 40px, 0);
+    transform-origin: 50% 0%;
   }
   .reveal.is-visible {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
-  @media (prefers-reduced-motion: reduce) {
-    .reveal {
+
+  /* Section headings: each word rises out of a mask once the heading reveals. */
+  .heading-word {
+    display: inline-block;
+    overflow: hidden;
+    vertical-align: bottom;
+    padding-bottom: 0.08em;
+    margin-bottom: -0.08em;
+  }
+  .heading-word > span {
+    display: inline-block;
+    transform: translate3d(0, 110%, 0) rotate(6deg);
+    transition: transform 1s var(--ease-out);
+    transition-delay: calc(var(--i) * 70ms + 120ms);
+  }
+  .is-visible .heading-word > span {
+    transform: none;
+  }
+
+  /* ---------------------------------------------------------------------------
+     Hero
+     ------------------------------------------------------------------------ */
+  .hero-title {
+    perspective: 900px;
+  }
+  .hero-char {
+    display: inline-block;
+    opacity: 0;
+    transform: translate3d(0, 0.5em, 0) rotateX(-85deg);
+    transform-origin: 50% 100%;
+    filter: blur(10px);
+    animation: char-in 1.2s var(--ease-out) forwards;
+    animation-delay: calc(var(--i) * 45ms + 150ms);
+  }
+  /* One continuous gradient across a split word: each letter shows its slice. */
+  .hero-char-gradient {
+    background-image: var(--brand-gradient);
+    background-size: calc(var(--n) * 100%) 100%;
+    background-position: calc(var(--j) / max(var(--n) - 1, 1) * 100%) 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  @keyframes char-in {
+    to {
       opacity: 1;
       transform: none;
+      filter: blur(0);
+    }
+  }
+
+  .rotator {
+    position: relative;
+    display: inline-block;
+    vertical-align: bottom;
+    height: 1.2em;
+    overflow: hidden;
+    perspective: 600px;
+    transition: width 0.6s var(--ease-out);
+    white-space: nowrap;
+  }
+  .rotator-word {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    transform: translate3d(0, 70%, 0) rotateX(-70deg);
+    transform-origin: 50% 100%;
+    transition:
+      opacity 0.6s var(--ease-out),
+      transform 0.7s var(--ease-out);
+  }
+  /* The first word sits in flow until the script measures widths. */
+  .rotator-word:first-child {
+    position: relative;
+  }
+  .rotator-word.is-active {
+    opacity: 1;
+    transform: none;
+  }
+  .rotator-word.is-leaving {
+    opacity: 0;
+    transform: translate3d(0, -70%, 0) rotateX(70deg);
+    transform-origin: 50% 0%;
+  }
+
+  /* Primary button with a rotating conic gradient border. */
+  .btn-glow {
+    @apply relative inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-sm font-semibold text-white;
+    background:
+      linear-gradient(rgb(var(--c-ink-950)), rgb(var(--c-ink-950))) padding-box,
+      conic-gradient(
+          from var(--border-angle),
+          rgb(var(--c-aqua)),
+          rgb(var(--c-violet)),
+          rgb(var(--c-rose)),
+          rgb(var(--c-peach)),
+          rgb(var(--c-aqua))
+        )
+        border-box;
+    border: 1.5px solid transparent;
+    animation: spin-border 5s linear infinite;
+    box-shadow: 0 0 40px -10px rgb(var(--c-violet) / 0.7);
+    transition: box-shadow 0.4s ease;
+  }
+  .btn-glow:hover {
+    box-shadow:
+      0 0 60px -8px rgb(var(--c-rose) / 0.75),
+      0 0 30px -10px rgb(var(--c-aqua) / 0.8);
+  }
+  /* Solid pill: white on dark; a warm orange gradient on light. */
+  .btn-solid {
+    @apply bg-white text-ink-950;
+  }
+  :root.light .btn-solid {
+    background: var(--brand-gradient);
+    color: #fff;
+    box-shadow: 0 8px 24px -10px rgb(var(--c-violet) / 0.7);
+  }
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 rounded-full border border-white/15 bg-ink-950/40 px-7 py-3.5 text-sm font-medium text-white/85 transition-colors hover:border-white/40 hover:text-white;
+  }
+  .icon-btn {
+    @apply flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-ink-950/40 text-white/70 transition-colors hover:border-white/30 hover:text-white;
+  }
+  [data-magnetic] {
+    transition:
+      transform 0.5s var(--ease-out),
+      box-shadow 0.4s ease,
+      color 0.2s ease,
+      border-color 0.2s ease,
+      background-color 0.2s ease;
+    will-change: transform;
+  }
+
+  /* ---------------------------------------------------------------------------
+     Experience timeline: the rail fills as you scroll (--p set by motion.ts).
+     ------------------------------------------------------------------------ */
+  .timeline-rail {
+    @apply pointer-events-none absolute bottom-6 left-[0.6875rem] top-6 w-px overflow-hidden rounded-full bg-white/10 sm:left-[1.1875rem];
+  }
+  .timeline-fill {
+    @apply absolute inset-0 origin-top;
+    background-image: linear-gradient(
+      180deg,
+      rgb(var(--c-aqua)),
+      rgb(var(--c-violet)) 40%,
+      rgb(var(--c-rose)) 75%,
+      rgb(var(--c-peach))
+    );
+    transform: scaleY(var(--p, 0));
+  }
+  .timeline-dot {
+    @apply absolute left-0 top-9 flex h-6 w-6 items-center justify-center rounded-full border border-white/15 bg-ink-950 sm:left-2;
+    transition:
+      border-color 0.5s ease,
+      box-shadow 0.5s ease;
+  }
+  .timeline-dot::after {
+    content: "";
+    @apply h-2 w-2 rounded-full bg-white/25;
+    transition:
+      background 0.5s ease,
+      transform 0.5s var(--ease-out);
+  }
+  .timeline-item.is-active .timeline-dot {
+    border-color: rgb(var(--c-rose) / 0.6);
+    box-shadow: 0 0 22px rgb(var(--c-rose) / 0.55);
+  }
+  .timeline-item.is-active .timeline-dot::after {
+    background: var(--brand-gradient);
+    transform: scale(1.35);
+  }
+
+  /* ---------------------------------------------------------------------------
+     Marquee band (translated by motion.ts, speeds up with scroll velocity).
+     ------------------------------------------------------------------------ */
+  .marquee-row {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  }
+  .marquee-track {
+    @apply flex w-max gap-4;
+    will-change: transform;
+  }
+
+  /* Nav: the shell turns into a floating glass pill once you scroll. */
+  .nav-shell {
+    border: 1px solid transparent;
+    transition:
+      background-color 0.4s ease,
+      border-color 0.4s ease,
+      box-shadow 0.4s ease,
+      backdrop-filter 0.4s ease;
+  }
+  .is-scrolled .nav-shell {
+    background: rgb(var(--c-ink-950) / 0.6);
+    border-color: rgb(var(--c-edge) / 0.08);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    backdrop-filter: blur(16px) saturate(150%);
+    box-shadow: 0 10px 40px -20px rgb(0 0 0 / 0.6);
+  }
+  #nav-indicator {
+    transition:
+      transform 0.5s var(--ease-out),
+      width 0.5s var(--ease-out),
+      opacity 0.3s ease;
+  }
+
+  /* ---------------------------------------------------------------------------
+     Reduced motion: everything visible, nothing moving.
+     ------------------------------------------------------------------------ */
+  @media (prefers-reduced-motion: reduce) {
+    .reveal,
+    .hero-char,
+    .heading-word > span,
+    .rotator-word {
+      opacity: 1;
+      transform: none;
+      filter: none;
       transition: none;
+      animation: none;
+    }
+    .rotator-word:not(:first-child) {
+      display: none;
+    }
+    .text-gradient,
+    .btn-glow {
+      animation: none;
     }
   }
 }

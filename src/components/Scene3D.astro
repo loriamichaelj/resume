@@ -1,0 +1,19 @@
+---
+// Fixed full-page WebGL backdrop: the volumetric cloud, its AWS / Azure / GCP
+// UFOs, the moon or sun, aurora colour fields, a starfield and network
+// graphs. The cloud parks on [data-cloud-anchor] elements as you scroll.
+// See src/scripts/scene/.
+---
+
+<canvas id="scene3d" class="scene-canvas" aria-hidden="true"></canvas>
+
+<!-- Labels that follow the orbiting provider orbs (positioned by cloud.ts) -->
+<div class="pointer-events-none fixed inset-0 -z-[1] overflow-hidden" aria-hidden="true">
+  <span class="orb-label" data-orb>AWS</span>
+  <span class="orb-label" data-orb>Azure</span>
+  <span class="orb-label" data-orb>GCP</span>
+</div>
+
+<script>
+  import "../scripts/scene/index";
+</script>

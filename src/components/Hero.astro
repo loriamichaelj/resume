@@ -1,56 +1,71 @@
 ---
-import { profile, socials } from "../data/site";
+import { profile, socials, heroRotator } from "../data/site";
 import Icon from "./Icon.astro";
-import Hero3D from "./Hero3D.astro";
+
+// "Michael J. Loria" -> "Michael J." on one line, "Loria" in gradient below.
+const parts = profile.name.split(" ");
+const lastName = parts.pop() ?? "";
+const firstLine = parts.join(" ");
+const firstChars = [...firstLine];
+const lastChars = [...lastName];
 ---
 
-<section id="top" class="relative overflow-hidden pt-32 pb-20 sm:pt-40 sm:pb-28">
-  <!-- Decorative gradient orb -->
-  <div
-    class="pointer-events-none absolute -top-40 right-[-10%] h-[34rem] w-[34rem] rounded-full bg-brand-gradient opacity-20 blur-[120px]"
-    aria-hidden="true"
-  >
-  </div>
-
-  <div class="container-px relative grid items-center gap-12 lg:grid-cols-[1.4fr_1fr]">
-    <div>
+<section id="top" class="relative flex min-h-[100svh] items-center pb-16 pt-28 sm:pt-32">
+  <div class="container-px relative grid items-center gap-6 lg:grid-cols-[1.2fr_1fr] lg:gap-4">
+    <div class="relative z-10">
       <p class="eyebrow reveal flex items-center gap-3">
-        <span class="inline-block h-px w-8 bg-white/30"></span>
+        <span class="relative flex h-2 w-2" aria-hidden="true">
+          <span class="absolute inset-0 animate-ping-soft rounded-full bg-aqua"></span>
+          <span class="relative h-2 w-2 rounded-full bg-aqua"></span>
+        </span>
         {profile.role}
       </p>
 
-      <h1
-        class="reveal mt-6 font-display text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl"
-        data-delay="80"
-      >
-        Michael J.<br />
-        <span class="text-gradient">Loria</span>
+      <h1 class="hero-title mt-6 font-display text-[clamp(3.1rem,8.5vw,6.75rem)] font-bold leading-[0.98] tracking-tight">
+        <span class="sr-only">{profile.name}</span>
+        <span class="block whitespace-nowrap" aria-hidden="true">
+          {firstChars.map((c, i) => (
+            <span class="hero-char" style={`--i:${i}`}>{c === " " ? " " : c}</span>
+          ))}
+        </span>
+        <span class="block whitespace-nowrap" aria-hidden="true">
+          {lastChars.map((c, j) => (
+            <span
+              class="hero-char hero-char-gradient"
+              style={`--i:${firstChars.length + j}; --j:${j}; --n:${lastChars.length}`}
+            >
+              {c}
+            </span>
+          ))}
+        </span>
       </h1>
 
+      <p class="reveal mt-6 font-display text-2xl font-medium text-white/85 sm:text-3xl" data-delay="700">
+        {heroRotator.prefix}
+        <span class="rotator" data-rotator>
+          {heroRotator.words.map((w, i) => (
+            <span class={`rotator-word text-gradient ${i === 0 ? "is-active" : ""}`}>{w}</span>
+          ))}
+        </span>
+        {heroRotator.suffix}
+      </p>
+
       <p
-        class="reveal mt-7 max-w-xl text-lg leading-relaxed text-white/65 sm:text-xl"
-        data-delay="160"
+        class="reveal mt-6 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg"
+        data-delay="820"
       >
         {profile.headline}
       </p>
 
-      <div class="reveal mt-9 flex flex-wrap items-center gap-4" data-delay="240">
-        <a
-          href="#services"
-          class="group inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-ink-950 transition-transform hover:-translate-y-0.5"
-        >
-          View my services
-          <Icon name="arrow" class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+      <div class="reveal mt-9 flex flex-wrap items-center gap-4" data-delay="940">
+        <a href="#experience" class="btn-glow group" data-magnetic="0.25">
+          See my projects
+          <Icon name="arrow" class="h-4 w-4 transition-transform group-hover:translate-x-1" />
         </a>
-        <a
-          href="#contact"
-          class="inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-medium text-white/85 transition-colors hover:border-white/40 hover:text-white"
-        >
-          Get in touch
-        </a>
+        <a href="#contact" class="btn-ghost" data-magnetic="0.2">Get in touch</a>
       </div>
 
-      <ul class="reveal mt-10 flex items-center gap-3" data-delay="320">
+      <ul class="reveal mt-10 flex items-center gap-3" data-delay="1060">
         {
           socials.map((s) => (
             <li>
@@ -59,7 +74,8 @@ import Hero3D from "./Hero3D.astro";
                 target={s.icon === "email" ? undefined : "_blank"}
                 rel="noopener noreferrer"
                 aria-label={s.label}
-                class="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 text-white/70 transition-all hover:-translate-y-0.5 hover:border-white/30 hover:text-white"
+                class="icon-btn"
+                data-magnetic="0.35"
               >
                 <Icon name={s.icon} class="h-[18px] w-[18px]" />
               </a>
@@ -69,9 +85,31 @@ import Hero3D from "./Hero3D.astro";
       </ul>
     </div>
 
-    <!-- Portrait -->
-    <div class="reveal justify-self-center lg:justify-self-end" data-delay="200">
-      <Hero3D />
+    <!--
+      Where the 3D cloud sits at the top of the page. The WebGL scene reads this
+      box (data-cloud-anchor); the SVG inside is the no-WebGL fallback.
+    -->
+    <div class="relative justify-self-center lg:justify-self-end">
+      <div
+        id="hero-cloud"
+        class="relative aspect-[5/4] w-[min(84vw,22rem)] sm:w-[26rem] lg:w-[31rem]"
+        data-cloud-anchor="0"
+        data-cloud-alpha="1"
+      >
+        <div class="cloud-fallback absolute inset-0 flex items-center justify-center" aria-hidden="true">
+          <div class="absolute inset-8 animate-float rounded-full bg-brand-gradient opacity-30 blur-3xl"></div>
+          <svg viewBox="0 0 24 24" class="relative w-3/4 animate-float drop-shadow-[0_20px_40px_rgba(123,97,255,0.45)]">
+            <defs>
+              <linearGradient id="cloud-fallback-fill" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#ffffff" />
+                <stop offset="0.55" stop-color="#c7b6ff" />
+                <stop offset="1" stop-color="#7b61ff" />
+              </linearGradient>
+            </defs>
+            <path d="M17.5 19H7a5 5 0 1 1 .9-9.92A6.5 6.5 0 0 1 20.4 11 4 4 0 0 1 17.5 19Z" fill="url(#cloud-fallback-fill)" />
+          </svg>
+        </div>
+      </div>
     </div>
   </div>
 </section>
