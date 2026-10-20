@@ -1,6 +1,6 @@
 # Michael J. Loria | Portfolio
 
-**Live site → https://loriamichaelj.github.io/resume/**
+**Live site → https://michaeljloria.com**
 
 A statically-rendered personal portfolio built with [Astro](https://astro.build), [Tailwind CSS](https://tailwindcss.com) and [Three.js](https://threejs.org).
 
@@ -68,7 +68,7 @@ The cloud's path is set in markup: any element with `data-cloud-anchor="<section
 ## Deploy
 
 Every push to `main` is built and published to **GitHub Pages** at
-https://loriamichaelj.github.io/resume/ via the workflow in
+https://michaeljloria.com via the workflow in
 `.github/workflows/deploy.yml`.
 
-The build is fully static, so `dist/` can also be hosted anywhere, such as Netlify, Vercel, or Cloudflare Pages. For a custom domain, update `site` (and remove `base`) in `astro.config.mjs`.
+The build is fully static, so `dist/` can also be hosted anywhere, such as Netlify, Vercel, or Cloudflare Pages. The custom domain is set by `site` in `astro.config.mjs` and `public/CNAME`; its DNS records (GitHub Pages A/AAAA on the apex, `www` CNAME to `loriamichaelj.github.io`) live in Cloud DNS.
