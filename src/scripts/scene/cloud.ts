@@ -4,12 +4,14 @@ import { bakeNoise } from "./noise";
 import type { CloudTarget } from "./anchors";
 import { createUfo, MAX_HEALTH } from "./ufo";
 import { createLightning } from "./lightning";
+import { createFace } from "./face";
 
 // A volumetric cumulus, ray-marched on the GPU inside a box. Its shape is a
 // soft union of spheres with a flattened base, eroded by baked 3D noise into
 // billows and wisps, and lit with self-shadowing toward a sun up and to the
-// right. Three little UFOs (AWS, Azure, GCP) orbit it; clicking the cloud
-// throws lightning at them until they're destroyed (they respawn later).
+// right. It has a face and moods: happy and relaxed, grumpy while it storms.
+// Three little UFOs (AWS, Azure, GCP) orbit it; clicking the cloud throws
+// lightning at them until they're destroyed (they respawn later).
 
 // Sphere lobes in the cloud's local space (x, y, z, radius). A flat-ish row
 // underneath, billows on top, and two lobes front and back for depth.
@@ -170,7 +172,7 @@ const fragmentShader = /* glsl */ `
         vec3 sky = mix(mix(uSkyBottom, tint, 0.45), uSkyTop, smoothstep(0.0, 0.85, h));
         // "Powder" darkening on thin, sunlit edges reads as cauliflower billows.
         float powder = 1.0 - exp(-dens * 5.0);
-        sky = mix(sky, sky * vec3(0.5, 0.52, 0.72), uStorm); // brooding storm light
+        sky = mix(sky, sky * vec3(0.62, 0.42, 0.58), uStorm); // an angry red-violet
         vec3 lit = uSun * sun * mix(0.5, 1.0, powder) + sky * (uAmbient.x + uAmbient.y * h);
         // Lightning lights the cloud from inside: bright around the strike,
         // with a dimmer wash through the whole cloud.
@@ -315,6 +317,11 @@ export function createCloud(opts: {
   const lightning = createLightning();
   root.add(lightning.object);
 
+  // Its face, on the front of the cloud (root space, so it keeps facing you
+  // while the cloud turns).
+  const face = createFace();
+  root.add(face.object);
+
   // ---- Orbiting provider UFOs ---------------------------------------------
   const glow = glowTexture();
   const orbits = new THREE.Group();
@@ -375,6 +382,24 @@ export function createCloud(opts: {
   let stormTime = 0; // seconds of storm left after a click
   let nextStrike = 0;
   let shake = 0;
+  // Mood: happy and relaxed by default, grumpy while it storms.
+  const mood = {
+    anger: 0,
+    squint: 0,
+    shout: 0,
+    wide: 0,
+    smile: 0.8,
+    look: new THREE.Vector2(),
+    lookGoal: new THREE.Vector2(),
+    blinkAt: 2.5,
+    blinkStart: -1,
+    blinkTwice: false,
+    squintUntil: 0,
+    nextSquint: 6,
+    victoryUntil: 0,
+    wasAnyAlive: true,
+    target: -1, // the UFO it's attacking, to glare at
+  };
   let puff = 0;
   let placed = false;
   let alpha = 0;
@@ -406,6 +431,7 @@ export function createCloud(opts: {
     uniforms.uAmbient.value.set(t.ambient[0], t.ambient[1]);
     for (const o of ufos) o.ufo.setTheme(light);
     lightning.setTheme(light);
+    face.setTheme(light);
     uniforms.uFlashColor.value.set(light ? "#ff8a3d" : "#9cc4ff");
   }
   setTheme(opts.light);
@@ -596,6 +622,71 @@ export function createCloud(opts: {
       }
     });
 
+    // ---- Face and mood ---------------------------------------------------------
+    const angry = stormTime > 0;
+    mood.anger = damp(mood.anger, angry ? 1 : 0, angry ? 6 : 1.8, dt);
+    // Blinks every few seconds, sometimes twice.
+    if (time > mood.blinkAt) {
+      mood.blinkStart = time;
+      mood.blinkTwice = Math.random() < 0.25;
+      mood.blinkAt = time + 2.2 + Math.random() * 3.6;
+    }
+    const bt = time - mood.blinkStart;
+    let blink = bt >= 0 && bt < 0.16 ? Math.sin((bt / 0.16) * Math.PI) : 0;
+    if (mood.blinkTwice && bt >= 0.22 && bt < 0.38) blink = Math.sin(((bt - 0.22) / 0.16) * Math.PI);
+    // Every UFO down: a smug grin for a few seconds.
+    const anyAlive = ufos.some((o) => o.ufo.alive());
+    if (mood.wasAnyAlive && !anyAlive && fleetVis > 0.5) mood.victoryUntil = time + 3.5;
+    mood.wasAnyAlive = anyAlive;
+    const victory = time < mood.victoryUntil;
+    // The odd happy squint while relaxed.
+    if (!angry && time > mood.nextSquint) {
+      mood.squintUntil = time + 1.3;
+      mood.nextSquint = time + 7 + Math.random() * 6;
+    }
+    const squinting = victory || (!angry && time < mood.squintUntil);
+    mood.squint = damp(mood.squint, (squinting ? 1 : 0) * (1 - mood.anger), 8, dt);
+    // Gaze: at the UFO it's attacking, else the cursor, else idly wandering.
+    const prey = mood.target >= 0 ? ufos[mood.target].ufo : null;
+    if (angry && prey && prey.visibility() > 0.1) {
+      prey.ship.getWorldPosition(tmp);
+      root.worldToLocal(tmp);
+      mood.lookGoal.set(clamp(tmp.x / 1.2, -1, 1), clamp(tmp.y / 0.6, -1, 1));
+    } else if (near > 0.05) {
+      mood.lookGoal.set(
+        clamp((f.pointer.x - screen.x) / screen.r, -1, 1),
+        clamp(-(f.pointer.y - screen.y) / screen.r, -1, 1),
+      );
+    } else {
+      mood.lookGoal.set(Math.sin(time * 0.31) * 0.6, Math.sin(time * 0.23 + 1) * 0.35);
+    }
+    mood.look.lerp(mood.lookGoal, 1 - Math.exp(-6 * dt));
+    mood.shout = damp(mood.shout, 0, 5, dt);
+    mood.wide = damp(mood.wide, near * (1 - mood.anger), 5, dt);
+    const happy = victory ? 1 : 0.65 + 0.12 * Math.sin(time * 0.9) + 0.25 * near;
+    mood.smile = damp(mood.smile, THREE.MathUtils.lerp(happy, -0.35, mood.anger), 7, dt);
+
+    // Grumpy: puffed up a touch, with a slight tremble.
+    body.scale.multiplyScalar(1 + 0.02 * mood.anger);
+    body.position.x += Math.sin(time * 40) * 0.004 * mood.anger;
+
+    face.update({
+      anger: mood.anger,
+      blink,
+      squint: mood.squint,
+      look: mood.look,
+      smile: mood.smile,
+      shout: mood.shout,
+      wide: mood.wide,
+      // Only where the cloud is front and centre, not ghosted behind cards.
+      opacity: smoothstep((alpha - 0.45) / 0.4),
+      time,
+    });
+    const sway = Math.sin(time * 0.3) * 0.28;
+    face.object.position.set(body.position.x + sway * 0.2, body.position.y + 0.03, 0.78);
+    face.object.rotation.set(0, sway * 0.4, 0);
+    face.object.scale.copy(body.scale).multiplyScalar(1 + puff * 0.06);
+
     // How brightly lightning is flashing, so the sky can light up with it.
     return flash;
   }
@@ -633,7 +724,9 @@ export function createCloud(opts: {
       stormTime = 2.4;
       shake = 1;
       nextStrike = 0.15;
+      mood.shout = 0.7;
       const target = pickTarget(x, y);
+      mood.target = target;
       if (target >= 0 && lastFrame) {
         // From the cloud's edge, on the side facing the saucer, to the saucer:
         // the bolt crosses open sky, so it reads against the dark.

@@ -4,7 +4,7 @@
 
 A statically-rendered personal portfolio built with [Astro](https://astro.build), [Tailwind CSS](https://tailwindcss.com) and [Three.js](https://threejs.org).
 
-A fixed WebGL scene sits behind the page: a volumetric, ray-marched cloud orbited at night by three little UFOs (AWS, Azure and GCP) with flame trails, lit by a full moon in dark mode or the sun in light mode, aurora colour fields that shift per section, and a parallax starfield. The night sky adds real constellations and network graphs with travelling packets; the day sky has small drifting clouds instead. As you scroll, the cloud flies between anchor points in each section; it billows toward your cursor, and a click (or tap) turns it into a thunderhead that throws lightning. Each click also fires a bolt at the nearest UFO: three hits and it explodes, then warps back in 12 seconds later. On top of that, a small vanilla script handles scroll reveals, card tilt and spotlight, magnetic buttons, the experience timeline, nav scrollspy and the tech marquee.
+A fixed WebGL scene sits behind the page: a volumetric, ray-marched cloud orbited at night by three little UFOs (AWS, Azure and GCP) with flame trails, lit by a full moon in dark mode or the sun in light mode, aurora colour fields that shift per section, and a parallax starfield. The night sky adds real constellations and network graphs with travelling packets; the day sky has small drifting clouds instead. The cloud has a face and moods: happy and relaxed by default, grumpy while it storms. As you scroll, it flies between anchor points in each section; it billows toward your cursor, and a click (or tap) turns it into a thunderhead that throws lightning. Each click also fires a bolt at the nearest UFO: three hits and it explodes, then warps back in 12 seconds later. On top of that, a small vanilla script handles scroll reveals, card tilt and spotlight, magnetic buttons, the experience timeline, nav scrollspy and the tech marquee.
 
 Scrolling is smoothed with [Lenis](https://github.com/darkroomengineering/lenis), and everything (scroll, DOM motion, the 3D scene) runs from one shared `requestAnimationFrame` loop so it all moves in the same frame.
 
@@ -52,6 +52,7 @@ src/
 │     ├─ world.ts          #   renderer, camera, scroll / pointer / theme, adaptive resolution
 │     ├─ anchors.ts        #   where the cloud parks: [data-cloud-anchor] elements
 │     ├─ cloud.ts          #   ray-marched volumetric cloud and the UFOs' orbits
+│     ├─ face.ts           #   the cloud's face: eyes, brows, mouth and moods
 │     ├─ ufo.ts            #   flying saucer: hull, dome, rim lights, thruster plume and trail
 │     ├─ lightning.ts      #   click storm: leaders, forked strokes, restrikes, sparks
 │     ├─ sky.ts            #   moon (dark) / sun with lens flare (light); lights the cloud
