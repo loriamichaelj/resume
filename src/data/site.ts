@@ -133,18 +133,18 @@ export type Project = {
 
 export const projects: Project[] = [
   {
-    title: "Azure and AWS Cloud Infrastructure",
+    title: "AWS, Azure and GCP Cloud Infrastructure",
     blurb:
-      "Multi-cloud and hybrid infrastructure on AWS and Azure: compute, identity, storage, and serverless, connected through VPC peering, Transit Gateway, and ExpressRoute.",
+      "Multi-cloud and hybrid infrastructure on AWS, Azure, and GCP: compute, identity, storage, and serverless, connected through VPC peering, Transit Gateway, and ExpressRoute.",
     code: "https://github.com/loriamichaelj",
-    tags: ["EC2", "VPC", "IAM", "Azure VMs", "VNet", "Entra ID", "Transit Gateway", "ExpressRoute"],
+    tags: ["EC2", "VPC", "IAM", "Azure VMs", "VNet", "Entra ID", "Compute Engine", "Cloud IAM", "Transit Gateway", "ExpressRoute"],
   },
   {
     title: "Containerized Deployment",
     blurb:
-      "Containerizing applications with Docker and running them on Kubernetes with Helm across EKS and AKS, with images stored in ECR or ACR and releases delivered through GitOps.",
+      "Containerizing applications with Docker and running them on Kubernetes with Helm across EKS, AKS, and GKE, with images stored in ECR, ACR, or Artifact Registry and releases delivered through GitOps.",
     code: "https://github.com/loriamichaelj",
-    tags: ["Docker", "Kubernetes", "Helm", "EKS / AKS", "ECR / ACR", "Istio", "ArgoCD"],
+    tags: ["Docker", "Kubernetes", "Helm", "EKS / AKS / GKE", "ECR / ACR / Artifact Registry", "Istio", "ArgoCD"],
   },
   {
     title: "Infrastructure as Code",
@@ -187,6 +187,7 @@ export const skills: SkillGroup[] = [
     items: [
       "AWS (EC2, VPC, IAM, S3, RDS, Lambda, EKS, ECS, Route 53, CloudFront, Auto Scaling)",
       "Azure (VMs, VNet, Entra ID, Storage, Blob, Functions, AKS, ACS, Policy, Blueprints, Cosmos DB, Monitor)",
+      "GCP (Compute Engine, VPC, Cloud IAM, Cloud Storage, Cloud SQL, Cloud Functions, GKE, Cloud Run, Cloud DNS, Cloud CDN)",
       "Multi-Cloud / Hybrid Cloud Strategy",
       "Cloud Networking (VPC Peering, Transit Gateway, ExpressRoute)",
     ],
@@ -217,7 +218,7 @@ export const skills: SkillGroup[] = [
     items: [
       "Docker (Best Practices)",
       "Kubernetes (Helm, Deployments, Services)",
-      "EKS / AKS Management",
+      "EKS / AKS / GKE Management",
       "Service Mesh (Istio)",
       "Container Security (Trivy, Falco)",
     ],
