@@ -51,6 +51,10 @@ function paintCloud(seed: number) {
   g.fillRect(0, base - 6, w, h);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.NoColorSpace;
+  // Upload the canvas premultiplied, as it is stored. Un-premultiplying
+  // blows the gradient dithering in the near-transparent edges (iOS Safari)
+  // up into bright blue and green specks.
+  tex.premultiplyAlpha = true;
   return { tex, aspect: w / h };
 }
 
@@ -60,7 +64,15 @@ export function createSkyClouds(opts: { count: number; span: number }) {
   const kinds = [paintCloud(3), paintCloud(9), paintCloud(21), paintCloud(40)];
   const clouds = Array.from({ length: opts.count }, (_, i) => {
     const kind = kinds[i % kinds.length];
-    const mat = new THREE.SpriteMaterial({ map: kind.tex, transparent: true, depthWrite: false });
+    // Premultiplied "over"; update() scales the colour by the opacity too.
+    const mat = new THREE.SpriteMaterial({
+      map: kind.tex,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.CustomBlending,
+      blendSrc: THREE.OneFactor,
+      blendDst: THREE.OneMinusSrcAlphaFactor,
+    });
     const sprite = new THREE.Sprite(mat);
     sprite.renderOrder = -40;
     const size = 1.6 + rand() * 2.2;
@@ -94,6 +106,7 @@ export function createSkyClouds(opts: { count: number; span: number }) {
       const hw = halfW(c.depth) * 1.35;
       c.sprite.position.set(-hw + c.u * hw * 2, c.y + Math.sin(time * 0.3 + c.bob) * 0.08, c.depth);
       c.mat.opacity = opacity * c.alpha;
+      c.mat.color.setScalar(c.mat.opacity);
     }
   }
 
