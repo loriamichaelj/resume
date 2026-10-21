@@ -5,6 +5,7 @@ import type { CloudTarget } from "./anchors";
 import { createUfo, MAX_HEALTH } from "./ufo";
 import { createLightning } from "./lightning";
 import { createFace } from "./face";
+import type { Quality } from "./quality";
 
 // A volumetric cumulus, ray-marched on the GPU inside a box. Its shape is a
 // soft union of spheres with a flattened base, eroded by baked 3D noise into
@@ -44,6 +45,30 @@ const ORBS = [
   { label: "GCP", color: "#34c759", radius: 1.22, tilt: 0.5, roll: 0.26, speed: 0.52, phase: 4.4 },
 ];
 const ORBIT_Z = 0.62; // orbits are ellipses, shallower front to back
+
+// Below full resolution the volume is ray-marched on its own layer into a
+// smaller offscreen buffer, then stretched over the box's footprint on screen.
+// The cloud is soft, so the upscale barely shows, and every halving of the
+// resolution quarters the cost of the march.
+const CLOUD_LAYER = 1;
+
+const compositeVertex = /* glsl */ `
+  uniform vec4 uRect; // screen-space footprint (NDC min xy, max xy)
+  varying vec2 vUv;
+  void main() {
+    vec2 ndc = mix(uRect.xy, uRect.zw, position.xy * 0.5 + 0.5);
+    vUv = ndc * 0.5 + 0.5;
+    gl_Position = vec4(ndc, 0.0, 1.0);
+  }
+`;
+
+const compositeFragment = /* glsl */ `
+  uniform sampler2D tCloud;
+  varying vec2 vUv;
+  void main() {
+    gl_FragColor = texture2D(tCloud, vUv); // already premultiplied
+  }
+`;
 
 const vertexShader = /* glsl */ `
   varying vec3 vOrigin;
@@ -251,12 +276,13 @@ export type CloudFrame = {
 };
 
 export function createCloud(opts: {
-  lowPower: boolean;
+  quality: Quality["cloud"];
   light: boolean;
   labels: HTMLElement[];
   onReady?: () => void;
 }) {
-  const noiseSize = opts.lowPower ? 36 : 48;
+  const q = opts.quality;
+  const noiseSize = q.noise;
   const uniforms = {
     // 1-voxel placeholder until the baked volume arrives.
     uNoise: { value: noiseTexture(new Uint8Array([128, 128]), 1) },
@@ -289,10 +315,10 @@ export function createCloud(opts: {
       LOBES: LOBES.length,
       FLOOR_Y: FLOOR.toFixed(3),
       TOP_Y: TOP.toFixed(3),
-      MAX_STEPS: opts.lowPower ? 56 : 96,
-      STEP: opts.lowPower ? "0.07" : "0.045",
-      LIGHT_STEPS: opts.lowPower ? 4 : 6,
-      LIGHT_STEP: opts.lowPower ? "0.13" : "0.09",
+      MAX_STEPS: q.steps,
+      STEP: q.step.toFixed(3),
+      LIGHT_STEPS: q.lightSteps,
+      LIGHT_STEP: q.lightStep.toFixed(3),
     },
     transparent: true,
     premultipliedAlpha: true,
@@ -307,11 +333,32 @@ export function createCloud(opts: {
   volume.renderOrder = 2;
   volume.frustumCulled = false;
 
+  // Offscreen buffer and the quad that lays it back over the scene, in the
+  // volume's place in the draw order. Sized by setResolution().
+  const buffer = new THREE.WebGLRenderTarget(1, 1, { depthBuffer: false });
+  const composite = new THREE.Mesh(
+    new THREE.PlaneGeometry(2, 2),
+    new THREE.ShaderMaterial({
+      uniforms: { tCloud: { value: buffer.texture }, uRect: { value: new THREE.Vector4(-1, -1, 1, 1) } },
+      vertexShader: compositeVertex,
+      fragmentShader: compositeFragment,
+      transparent: true,
+      premultipliedAlpha: true,
+      depthTest: false,
+      depthWrite: false,
+    }),
+  );
+  composite.renderOrder = 2;
+  composite.frustumCulled = false;
+  composite.visible = false;
+  let offscreen = false;
+
   const root = new THREE.Group(); // anchored position + size
   const body = new THREE.Group(); // sway, tilt, squash
   volume.position.y = -(FLOOR + TOP) / 2 + 0.06; // centre the cloud on its anchor
   body.add(volume);
   root.add(body);
+  root.add(composite);
 
   // Lightning lives in root space (unrotated), so its bolts face the camera.
   const lightning = createLightning();
@@ -497,6 +544,8 @@ export function createCloud(opts: {
       screen = { x: target.x, y: target.y, r: target.size * 0.5 };
     }
     uniforms.uAlpha.value = alpha;
+    // Nothing to see (not baked yet, or faded out): skip the ray march.
+    volume.visible = alpha > 0.002;
 
     // Sun direction in the volume's local space.
     volume.updateWorldMatrix(true, false);
@@ -744,9 +793,59 @@ export function createCloud(opts: {
     }
   }
 
+  // Nothing playing out that needs the full frame rate: no storm, bolts or
+  // strikes still on their way.
+  function calm() {
+    return stormTime === 0 && storm < 0.01 && shake < 0.01 && pendingHits.length === 0;
+  }
+
   // Where the light comes from (world space, normalised).
   function setLightDir(dir: THREE.Vector3) {
     sunWorld.copy(dir);
+  }
+
+  // The cloud's resolution: `scale` of the canvas's drawing buffer. At full
+  // scale it's drawn straight into the scene, which needs no extra pass.
+  function setResolution(bufferW: number, bufferH: number, scale: number) {
+    offscreen = scale < 0.999;
+    volume.layers.set(offscreen ? CLOUD_LAYER : 0);
+    if (offscreen) buffer.setSize(Math.max(1, Math.round(bufferW * scale)), Math.max(1, Math.round(bufferH * scale)));
+    else buffer.setSize(1, 1); // free the memory
+  }
+
+  // Before the main render: ray-march the volume into its buffer and fit the
+  // composite quad to the box's footprint on screen.
+  const corner = new THREE.Vector3();
+  const rect = composite.material.uniforms.uRect.value as THREE.Vector4;
+  function render(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
+    composite.visible = false;
+    if (!offscreen || !volume.visible) return;
+    volume.updateWorldMatrix(true, false);
+    let x0 = 1, y0 = 1, x1 = -1, y1 = -1;
+    for (let i = 0; i < 8; i++) {
+      corner
+        .set(i & 1 ? BOX_MAX.x : BOX_MIN.x, i & 2 ? BOX_MAX.y : BOX_MIN.y, i & 4 ? BOX_MAX.z : BOX_MIN.z)
+        .applyMatrix4(volume.matrixWorld)
+        .project(camera);
+      x0 = Math.min(x0, corner.x);
+      y0 = Math.min(y0, corner.y);
+      x1 = Math.max(x1, corner.x);
+      y1 = Math.max(y1, corner.y);
+    }
+    // A texel of margin so bilinear filtering doesn't clip the soft edge.
+    const mx = 2 / buffer.width;
+    const my = 2 / buffer.height;
+    rect.set(Math.max(-1, x0 - mx), Math.max(-1, y0 - my), Math.min(1, x1 + mx), Math.min(1, y1 + my));
+    if (rect.x >= rect.z || rect.y >= rect.w) return; // off screen
+
+    const mask = camera.layers.mask;
+    camera.layers.set(CLOUD_LAYER);
+    const scene = root.parent ?? root;
+    renderer.setRenderTarget(buffer);
+    renderer.render(scene, camera);
+    renderer.setRenderTarget(null);
+    camera.layers.mask = mask;
+    composite.visible = true;
   }
 
   // Point sprite sizes depend on the canvas height (in device pixels).
@@ -754,5 +853,5 @@ export function createCloud(opts: {
     for (const o of ufos) o.ufo.resize(heightPx, fov);
   }
 
-  return { object: root, update, setTheme, poke, resize, setLightDir };
+  return { object: root, update, render, calm, setTheme, poke, resize, setResolution, setLightDir };
 }

@@ -8,6 +8,7 @@ import { createSky } from "./sky";
 import { createConstellations } from "./constellations";
 import { createSkyClouds } from "./skyclouds";
 import { clamp, damp } from "./util";
+import { applyQuality, LEVELS, savedLevel, type Quality } from "./quality";
 import { onFrame } from "../ticker";
 
 // How far (world units) the background column travels over the full page
@@ -15,27 +16,32 @@ import { onFrame } from "../ticker";
 const SPAN = 36;
 const CAMERA_Z = 10;
 
-export function createWorld(canvas: HTMLCanvasElement) {
+export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const coarse = matchMedia("(pointer: coarse)").matches;
-  const lowPower = coarse || (navigator.hardwareConcurrency ?? 8) <= 4;
+  const lowPower = quality.tier === "low";
   const isLight = () => document.documentElement.classList.contains("light");
 
   const renderer = new THREE.WebGLRenderer({
     canvas,
     alpha: true,
-    // MSAA on a full-screen ray-marched backdrop is costly and the scene is
-    // soft anyway, so phones go without it.
-    antialias: !lowPower,
-    powerPreference: "high-performance",
+    // MSAA is costly on weak GPUs and the scene is soft anyway, so the low
+    // tier goes without it.
+    antialias: quality.antialias,
+    // Only the top tier asks for a discrete GPU: elsewhere the integrated one
+    // copes and saves the battery.
+    powerPreference: quality.tier === "high" ? "high-performance" : "default",
   });
   // Colour management is off (see util.ts): no output conversion either.
   renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
   renderer.setClearColor(0x000000, 0);
-  // The backdrop is soft, so it doesn't need full retina resolution.
-  const maxRatio = Math.min(window.devicePixelRatio, lowPower ? 1 : 1.5);
-  let ratio = maxRatio;
-  renderer.setPixelRatio(ratio);
+
+  // Render resolution, as a rung on the adaptive ladder (see quality.ts). Start
+  // where this device settled last time, else at its tier's default.
+  const dpr = window.devicePixelRatio || 1;
+  let level = clamp(savedLevel(quality) ?? quality.start, 0, quality.max);
+  const ratioAt = (l: number) => Math.min(dpr, LEVELS[l].ratio);
+  renderer.setPixelRatio(ratioAt(level));
+  applyQuality(quality, level);
 
   if (reduceMotion) {
     canvas.classList.add("is-static");
@@ -98,7 +104,12 @@ export function createWorld(canvas: HTMLCanvasElement) {
   // scrolls away with the page doesn't get them.
   const labels = reduceMotion ? [] : Array.from(document.querySelectorAll<HTMLElement>("[data-orb]"));
   // Under reduced motion the still frame is redrawn once the cloud can show.
-  const cloud = createCloud({ lowPower, light, labels, onReady: () => reduceMotion && renderStatic() });
+  const cloud = createCloud({
+    quality: quality.cloud,
+    light,
+    labels,
+    onReady: () => reduceMotion && renderStatic(),
+  });
   scene.add(cloud.object);
 
   const path = new CloudPath();
@@ -123,10 +134,13 @@ export function createWorld(canvas: HTMLCanvasElement) {
     networkC.object.position.set(-halfW(-8) * 0.62, -at("about") * SPAN - 1, -8);
   }
 
+  const drawing = new THREE.Vector2();
   function resize() {
     width = canvas.clientWidth || window.innerWidth;
     height = canvas.clientHeight || window.innerHeight;
     renderer.setSize(width, height, false);
+    renderer.getDrawingBufferSize(drawing);
+    cloud.setResolution(drawing.x, drawing.y, LEVELS[level].cloud);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     const px = height * renderer.getPixelRatio();
@@ -148,9 +162,12 @@ export function createWorld(canvas: HTMLCanvasElement) {
 
   // ---- Input -------------------------------------------------------------------
   const pointer = { x: 0, y: 0, nx: 0, ny: 0, active: false };
+  // When anything last moved (pointer, scroll, a click), for the idle throttle.
+  let lastInput = performance.now();
   window.addEventListener(
     "pointermove",
     (e) => {
+      lastInput = performance.now();
       pointer.x = e.clientX;
       pointer.y = e.clientY;
       pointer.nx = (e.clientX / window.innerWidth) * 2 - 1;
@@ -160,12 +177,14 @@ export function createWorld(canvas: HTMLCanvasElement) {
     { passive: true },
   );
   document.documentElement.addEventListener("pointerleave", () => (pointer.active = false));
+  window.addEventListener("keydown", () => (lastInput = performance.now()), { passive: true });
   // A click on the cloud sets off its storm, unless it lands on something
   // interactive in front of it (a link, a button, a tag, the definition card).
   const INTERACTIVE = "a, button, input, select, textarea, label, [role='dialog'], [role='button'], [data-overlay]";
   window.addEventListener(
     "pointerdown",
     (e) => {
+      lastInput = performance.now();
       if ((e.target as Element | null)?.closest?.(INTERACTIVE)) return;
       cloud.poke(e.clientX, e.clientY);
     },
@@ -248,6 +267,7 @@ export function createWorld(canvas: HTMLCanvasElement) {
     skyClouds.update(time, dt, 1 - night);
     aurora.update(time, target?.section ?? 0, dt, flash);
 
+    cloud.render(renderer, camera);
     renderer.render(scene, camera);
   }
 
@@ -258,14 +278,33 @@ export function createWorld(canvas: HTMLCanvasElement) {
     for (let i = 0; i < 90; i++) step(1 / 30, false);
   }
 
-  // Adaptive resolution: if frames run long for a second, render the backdrop
-  // at a lower pixel ratio; step back up after a sustained smooth stretch.
-  // Phones step down further and stay down: each change reallocates the
-  // buffers, and bouncing back up would hitch the scroll again.
-  const minRatio = lowPower ? 0.5 : 0.75;
+  // Adaptive resolution: if frames run long for a second, step down a rung
+  // (the cloud's resolution first, then the canvas's); step back up after a
+  // sustained smooth stretch, up to the tier's ceiling. Each step down doubles
+  // the wait before trying the next rung up, so a device settles instead of
+  // bouncing between two. Touch devices only step down: each change
+  // reallocates buffers, and bouncing back up would hitch the scroll again.
   let slow = 0;
   let smooth = 0;
+  let upAfter = 8;
+  let warmup = 2; // seconds: start-up (fonts, parsing, uploads) hitches anyway
+  const sameRung = (a: number, b: number) => ratioAt(a) === ratioAt(b) && LEVELS[a].cloud === LEVELS[b].cloud;
+  function setLevel(next: number) {
+    // Skip rungs that change nothing on this screen (ratios above its own).
+    const dir = Math.sign(next - level);
+    while (next > 0 && next < quality.max && sameRung(next, level)) next += dir;
+    if (sameRung(next, level)) return;
+    const ratioChanged = ratioAt(next) !== ratioAt(level);
+    level = next;
+    if (ratioChanged) renderer.setPixelRatio(ratioAt(level));
+    resize();
+    applyQuality(quality, level);
+  }
   function adapt(dt: number) {
+    if (warmup > 0) {
+      warmup -= dt;
+      return;
+    }
     if (dt > 1 / 45) {
       slow += dt;
       smooth = 0;
@@ -273,18 +312,24 @@ export function createWorld(canvas: HTMLCanvasElement) {
       smooth += dt;
       slow = Math.max(0, slow - dt * 0.5);
     }
-    if (slow > 1 && ratio > minRatio) {
-      ratio = Math.max(minRatio, ratio - 0.25);
-      renderer.setPixelRatio(ratio);
-      resize();
+    if (slow > 1 && level > 0) {
+      setLevel(level - 1);
+      upAfter = Math.min(upAfter * 2, 120);
       slow = 0;
-    } else if (!lowPower && smooth > 8 && ratio < maxRatio) {
-      ratio = Math.min(maxRatio, ratio + 0.25);
-      renderer.setPixelRatio(ratio);
-      resize();
+      smooth = 0;
+    } else if (!quality.touch && smooth > upAfter && level < quality.max) {
+      setLevel(level + 1);
       smooth = 0;
     }
   }
+
+  // Frame pacing. The low tier caps at 60 fps (a 120 Hz screen would double
+  // its work), and the lower tiers drop to a slow drift rate once nothing on
+  // the page has moved for a few seconds, which keeps fans and heat down.
+  const IDLE_AFTER = 4000; // ms
+  let pending = 0;
+  const isIdle = (now: number) =>
+    quality.idleFps > 0 && now - lastInput > IDLE_AFTER && Math.abs(scrollVel) < 1 && cloud.calm();
 
   let running = false;
   function start() {
@@ -294,10 +339,19 @@ export function createWorld(canvas: HTMLCanvasElement) {
     running = false;
   }
   // Runs after smooth scrolling and DOM motion in the shared frame loop.
-  onFrame((_, dt) => {
+  onFrame((now, dt) => {
     if (!running || document.hidden) return;
-    step(dt, true);
-    adapt(dt);
+    if (window.scrollY !== lastScroll) lastInput = now;
+    const idle = isIdle(now);
+    const fps = idle ? quality.idleFps : quality.maxFps;
+    pending += dt;
+    // Half a frame of slack, so a cap near the display rate doesn't drop frames.
+    if (fps > 0 && pending < 1 / fps - dt * 0.5) return;
+    const elapsed = pending;
+    pending = 0;
+    step(elapsed, true);
+    // Throttled frames say nothing about how the GPU is coping.
+    if (!idle) adapt(elapsed);
   }, 10);
 
   if (reduceMotion) {

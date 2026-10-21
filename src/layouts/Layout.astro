@@ -35,6 +35,25 @@ const {
           document.documentElement.classList.toggle("light", light);
         } catch {}
       })();
+      // Rendering quality for the page's glass effects, also before first paint:
+      // what the scene settled on last visit (src/scripts/scene/quality.ts),
+      // else "low" for touch screens and obviously weak devices.
+      (() => {
+        let css = "";
+        try {
+          css = JSON.parse(localStorage.getItem("scene-quality") || "null")?.css || "";
+        } catch {}
+        const n = navigator;
+        if (
+          matchMedia("(pointer: coarse)").matches ||
+          (n.hardwareConcurrency || 8) <= 2 ||
+          (n.deviceMemory || 8) < 4 ||
+          n.connection?.saveData
+        ) {
+          css = "low";
+        }
+        if (css) document.documentElement.dataset.quality = css;
+      })();
     </script>
     <link rel="icon" href={withBase("favicon.svg")} type="image/svg+xml" />
     <link rel="icon" href={withBase("favicon-32.png")} sizes="32x32" type="image/png" />
