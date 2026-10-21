@@ -3,12 +3,12 @@ import * as THREE from "three";
 // A little flying saucer for each cloud provider. A spinning metal hull with
 // panel seams, grooves and a ring of glowing portholes; a glowing equator band
 // with chasing lights; a glass dome with an antenna; a tractor
-// emitter underneath; and twin thrusters that leave a flickering flame trail
-// along the orbit. Sizes are in the cloud's local units (the cloud is ~2 wide).
+// emitter underneath; and a flickering flame trail along the orbit. Sizes are
+// in the cloud's local units (the cloud is ~2 wide).
 //
 // Each saucer has health. Lightning hits (see cloud.ts) flash and jolt it,
-// and damage builds up visibly: scorch marks, flickering lights, sputtering
-// thrusters and a trail that turns to fire. At zero it explodes, spirals down
+// and damage builds up visibly: scorch marks, flickering lights and a
+// trail that turns to fire. At zero it explodes, spirals down
 // and disappears, then warps back in a little later.
 
 const HULL_R = 0.15;
@@ -130,29 +130,8 @@ const domeFragment = /* glsl */ `
   }
 `;
 
-// Exhaust plume: an open cone behind a nozzle, hot at the base and fading
-// toward the tip. uv.y runs 0 (nozzle) .. 1 (tip) on ConeGeometry.
-const plumeVertex = /* glsl */ `
-  varying float vL;
-  void main() {
-    vL = uv.y;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-const plumeFragment = /* glsl */ `
-  uniform vec3 uColor;
-  uniform float uOpacity;
-  uniform float uFlicker;
-  varying float vL;
-  void main() {
-    vec3 col = mix(vec3(1.0, 0.97, 0.9), uColor, smoothstep(0.0, 0.6, vL));
-    float a = pow(1.0 - vL, 1.4) * (0.65 + 0.35 * uFlicker);
-    gl_FragColor = vec4(col, a * uOpacity);
-  }
-`;
-
 // Point sprites: rim lights (uTrail 0) chase around the band; trail particles
-// (uTrail 1) are laid out along the orbit behind the ship, hot at the nozzle,
+// (uTrail 1) are laid out along the orbit behind the ship, hot at the ship,
 // cooling to the provider colour and breaking up toward the tail.
 const sparkVertex = /* glsl */ `
   attribute float aK;
@@ -240,7 +219,7 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
   // ---- Ship ---------------------------------------------------------------
   const ship = new THREE.Group(); // positioned on the orbit, faces along it
   const craft = new THREE.Group(); // bob and wobble
-  const spinner = new THREE.Group(); // the hull spins; dome and thrusters don't
+  const spinner = new THREE.Group(); // the hull spins; the dome doesn't
   ship.add(craft);
   craft.add(spinner);
 
@@ -338,51 +317,6 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
   tip.position.y = 0.12;
   craft.add(tip);
 
-  // Twin thrusters at the back (-x): metal nozzles, exhaust plumes and a glow.
-  const PLUME_LEN = 0.18;
-  const plumeMat = new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: accent }, uOpacity: { value: 1 }, uFlicker: { value: 1 } },
-    vertexShader: plumeVertex,
-    fragmentShader: plumeFragment,
-    transparent: true,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
-  });
-  // Cone along +y (tip up), turned so the tip points back along -x with its
-  // base at the group origin.
-  const plumeGeo = new THREE.ConeGeometry(0.017, PLUME_LEN, 16, 1, true)
-    .rotateZ(Math.PI / 2)
-    .translate(-PLUME_LEN / 2, 0, 0);
-  const nozzleGeo = new THREE.CylinderGeometry(0.014, 0.02, 0.034, 14).rotateZ(Math.PI / 2);
-  const plumes: THREE.Group[] = [];
-  const plumeMeshes: THREE.Mesh[] = [];
-  const nozzles: THREE.Mesh[] = [];
-  for (const z of [-0.028, 0.028]) {
-    const nozzle = new THREE.Mesh(nozzleGeo, metalMat);
-    nozzle.position.set(-HULL_R + 0.008, -0.004, z);
-    craft.add(nozzle);
-    nozzles.push(nozzle);
-    const plume = new THREE.Group();
-    plume.position.set(-HULL_R - 0.008, -0.004, z);
-    const mesh = new THREE.Mesh(plumeGeo, plumeMat);
-    plume.add(mesh);
-    craft.add(plume);
-    plumes.push(plume);
-    plumeMeshes.push(mesh);
-  }
-
-  const flameMat = new THREE.SpriteMaterial({
-    map: glow,
-    color: "#fff2dc",
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-  });
-  const flame = new THREE.Sprite(flameMat);
-  flame.position.set(-HULL_R - 0.02, -0.004, 0);
-  craft.add(flame);
-
   // Soft light spilling from underneath, in the provider colour.
   const underMat = new THREE.SpriteMaterial({
     map: glow,
@@ -417,8 +351,8 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
 
   // Everything draws after the cloud (which writes no depth) and fades via
   // opacity while behind it. Glass and glows last, so solid parts show through.
-  for (const o of [hull, band, collar, antenna, emitter, ...nozzles]) o.renderOrder = 5;
-  for (const o of [dome, rim, tip, flame, under, trail, ...plumeMeshes]) o.renderOrder = 6;
+  for (const o of [hull, band, collar, antenna, emitter]) o.renderOrder = 5;
+  for (const o of [dome, rim, tip, under, trail]) o.renderOrder = 6;
 
   // ---- Explosion: a flash and a spray of debris where the saucer died -------
   const boomMat = new THREE.SpriteMaterial({
@@ -451,9 +385,9 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
   ship.add(debris);
   const debrisVel = Array.from({ length: DEBRIS }, () => new THREE.Vector3());
 
-  const shaders = [hullMat, bandMat, emitterMat, metalMat, domeMat, plumeMat];
+  const shaders = [hullMat, bandMat, emitterMat, metalMat, domeMat];
   const sparks = [rimMat, trailMat];
-  const sprites = [tipMat, flameMat, underMat, boomMat, debrisMat];
+  const sprites = [tipMat, underMat, boomMat, debrisMat];
   let scale = 1;
 
   // ---- Health ----------------------------------------------------------------
@@ -493,13 +427,12 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
 
   function setTheme(light: boolean) {
     const blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
-    for (const m of [...sparks, plumeMat]) {
+    for (const m of sparks) {
       m.blending = blending;
       if (m.uniforms.uLight) m.uniforms.uLight.value = light ? 1 : 0;
       m.needsUpdate = true;
     }
     for (const m of sprites) m.blending = blending;
-    flameMat.color.set(light ? color : "#fff2dc");
   }
 
   function resize(heightPx: number, fov: number) {
@@ -512,7 +445,7 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
     // A destroyed saucer stops where it was hit.
     const angle = dying >= 0 ? deathAngle : f.angle;
     ship.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius * zScale);
-    // Face along the orbit's tangent, so the thrusters (-x) point back.
+    // Face along the orbit's tangent, so the trail streams out behind (-x).
     const tx = -Math.sin(angle) * radius;
     const tz = Math.cos(angle) * radius * zScale;
     ship.rotation.y = Math.atan2(-tz, tx);
@@ -521,13 +454,6 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
     craft.rotation.x = Math.sin(time * 1.4 + phase * 2) * 0.06;
     spinner.rotation.y = time * 1.6 + phase;
 
-    const flick = 0.8 + 0.2 * Math.sin(time * 37 + phase) * Math.sin(time * 23);
-    flame.scale.setScalar(0.17 * flick);
-    plumes.forEach((p, i) => {
-      const fl = i === 0 ? flick : 0.8 + 0.2 * Math.sin(time * 41 + phase + 2) * Math.sin(time * 19);
-      p.scale.set(0.8 + 0.4 * fl, 0.9 + 0.15 * fl, 0.9 + 0.15 * fl);
-    });
-    plumeMat.uniforms.uFlicker.value = flick;
     hullMat.uniforms.uTime.value = time + phase;
     bandMat.uniforms.uPulse.value = 0.85 + 0.15 * Math.sin(time * 2.2 + phase);
     emitterMat.uniforms.uPulse.value = 0.6 + 0.4 * Math.sin(time * 4 + phase);
@@ -542,12 +468,11 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
     craft.rotation.x += Math.sin(time * 26) * 0.35 * jolt + Math.sin(time * 7 + phase) * 0.08 * damage;
     craft.rotation.z -= 0.14 * damage;
     craft.position.y -= 0.025 * damage;
-    // Lights short out and thrusters sputter.
+    // Lights short out.
     if (damage > 0 && Math.random() < damage * 0.22) {
       bandMat.uniforms.uPulse.value *= 0.15;
       emitterMat.uniforms.uPulse.value *= 0.1;
     }
-    if (damage > 0 && Math.random() < damage * 0.16) for (const p of plumes) p.scale.setScalar(0.15);
     trailColor.copy(accent).lerp(FIRE, Math.min(1, damage * 1.3));
 
     let trailFade = 1;
@@ -605,7 +530,6 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
 
     for (const m of shaders) m.uniforms.uOpacity.value = opacity;
     tipMat.opacity = opacity * blink;
-    flameMat.opacity = opacity;
     underMat.opacity = opacity * (0.5 + 0.2 * Math.sin(time * 4 + phase));
 
     for (const m of sparks) {
