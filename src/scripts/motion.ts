@@ -175,6 +175,14 @@ let lastY = window.scrollY;
 let velocity = 0;
 let direction = 1;
 let activeNav = -1;
+let parallaxRects: DOMRect[] = [];
+// The scroll-linked reads below force layout, so they only run when the page
+// has scrolled or its geometry may have changed.
+let dirty = true;
+const markDirty = () => (dirty = true);
+window.addEventListener("resize", markDirty);
+window.addEventListener("load", markDirty);
+document.fonts?.ready.then(markDirty);
 
 function moveIndicator(index: number) {
   if (!navIndicator) return;
@@ -196,32 +204,45 @@ function frame(_: number, dt: number) {
   velocity += (dy / dt - velocity) * 0.15;
   if (Math.abs(dy) > 0.5) direction = dy > 0 ? 1 : -1;
 
-  // Reads first...
-  const maxScroll = Math.max(1, document.documentElement.scrollHeight - vh);
-  const timelineRect = timeline?.getBoundingClientRect();
-  const itemTops = timelineItems.map((el) => el.getBoundingClientRect().top);
-  const parallaxRects = parallax.map((el) => el.parentElement!.getBoundingClientRect());
-  let current = -1;
-  navSections.forEach((s, i) => {
-    if (s.getBoundingClientRect().top <= vh * 0.4) current = i;
-  });
+  const scrolled = dy !== 0 || dirty;
+  dirty = false;
 
-  // ...then writes.
-  if (progressBar) progressBar.style.transform = `scaleX(${(y / maxScroll).toFixed(4)})`;
-  header?.classList.toggle("is-scrolled", y > 24);
+  if (scrolled) {
+    // Reads first...
+    const maxScroll = Math.max(1, document.documentElement.scrollHeight - vh);
+    const timelineRect = timeline?.getBoundingClientRect();
+    const itemTops = timelineItems.map((el) => el.getBoundingClientRect().top);
+    let current = -1;
+    navSections.forEach((s, i) => {
+      if (s.getBoundingClientRect().top <= vh * 0.4) current = i;
+    });
+    if (!reduceMotion) parallaxRects = parallax.map((el) => el.parentElement!.getBoundingClientRect());
 
-  if (timeline && timelineRect) {
-    const p = clamp((vh * 0.62 - timelineRect.top) / timelineRect.height);
-    timeline.style.setProperty("--p", p.toFixed(4));
-    timelineItems.forEach((el, i) => el.classList.toggle("is-active", itemTops[i] < vh * 0.62));
+    // ...then writes.
+    if (progressBar) progressBar.style.transform = `scaleX(${(y / maxScroll).toFixed(4)})`;
+    header?.classList.toggle("is-scrolled", y > 24);
+
+    if (timeline && timelineRect) {
+      const p = clamp((vh * 0.62 - timelineRect.top) / timelineRect.height);
+      timeline.style.setProperty("--p", p.toFixed(4));
+      timelineItems.forEach((el, i) => el.classList.toggle("is-active", itemTops[i] < vh * 0.62));
+    }
+
+    if (current !== activeNav) {
+      activeNav = current;
+      moveIndicator(current);
+      navLinks.forEach((a, i) => a.classList.toggle("is-active", i === current));
+    }
   }
 
   if (!reduceMotion) {
-    parallax.forEach((el, i) => {
-      const r = parallaxRects[i];
-      const offset = (r.top + r.height / 2 - vh / 2) * Number(el.dataset.parallax || 0.15);
-      el.style.transform = `translate3d(0, ${offset.toFixed(1)}px, 0)`;
-    });
+    if (scrolled) {
+      parallax.forEach((el, i) => {
+        const r = parallaxRects[i];
+        const offset = (r.top + r.height / 2 - vh / 2) * Number(el.dataset.parallax || 0.15);
+        el.style.transform = `translate3d(0, ${offset.toFixed(1)}px, 0)`;
+      });
+    }
 
     if (marqueeVisible) {
       marqueeFlow += ((marqueeHeld() ? 0 : 1) - marqueeFlow) * (1 - Math.exp(-6 * dt));
@@ -241,13 +262,6 @@ function frame(_: number, dt: number) {
       glow.style.transform = `translate3d(${pointer.gx.toFixed(1)}px, ${pointer.gy.toFixed(1)}px, 0) translate(-50%, -50%)`;
     }
   }
-
-  if (current !== activeNav) {
-    activeNav = current;
-    moveIndicator(current);
-    navLinks.forEach((a, i) => a.classList.toggle("is-active", i === current));
-  }
-
 }
 onFrame(frame, 0);
 window.addEventListener("resize", () => moveIndicator(activeNav));

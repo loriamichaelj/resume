@@ -637,6 +637,28 @@
       opacity 0.3s ease;
   }
 
+  /* Touch devices: a backdrop blur over the animating canvas is re-run every
+     frame and makes scrolling choppy, so use a denser tint instead. */
+  @media (hover: none) and (pointer: coarse) {
+    .card-glass,
+    .term-card,
+    .is-scrolled .nav-shell {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+    .card-glass {
+      background:
+        linear-gradient(135deg, rgb(255 255 255 / 0.09), rgb(255 255 255 / 0.03)),
+        rgb(var(--c-ink-950) / 0.4);
+    }
+    :root.light .card-glass {
+      background: linear-gradient(135deg, rgb(255 255 255 / 0.75), rgb(255 255 255 / 0.5));
+    }
+    .is-scrolled .nav-shell {
+      background: rgb(var(--c-ink-950) / 0.85);
+    }
+  }
+
   /* ---------------------------------------------------------------------------
      Reduced motion: everything visible, nothing moving.
      ------------------------------------------------------------------------ */

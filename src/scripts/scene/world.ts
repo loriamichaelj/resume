@@ -24,14 +24,16 @@ export function createWorld(canvas: HTMLCanvasElement) {
   const renderer = new THREE.WebGLRenderer({
     canvas,
     alpha: true,
-    antialias: true,
+    // MSAA on a full-screen ray-marched backdrop is costly and the scene is
+    // soft anyway, so phones go without it.
+    antialias: !lowPower,
     powerPreference: "high-performance",
   });
   // Colour management is off (see util.ts): no output conversion either.
   renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
   renderer.setClearColor(0x000000, 0);
   // The backdrop is soft, so it doesn't need full retina resolution.
-  const maxRatio = Math.min(window.devicePixelRatio, lowPower ? 1.25 : 1.5);
+  const maxRatio = Math.min(window.devicePixelRatio, lowPower ? 1 : 1.5);
   let ratio = maxRatio;
   renderer.setPixelRatio(ratio);
 
@@ -258,6 +260,9 @@ export function createWorld(canvas: HTMLCanvasElement) {
 
   // Adaptive resolution: if frames run long for a second, render the backdrop
   // at a lower pixel ratio; step back up after a sustained smooth stretch.
+  // Phones step down further and stay down: each change reallocates the
+  // buffers, and bouncing back up would hitch the scroll again.
+  const minRatio = lowPower ? 0.5 : 0.75;
   let slow = 0;
   let smooth = 0;
   function adapt(dt: number) {
@@ -268,12 +273,12 @@ export function createWorld(canvas: HTMLCanvasElement) {
       smooth += dt;
       slow = Math.max(0, slow - dt * 0.5);
     }
-    if (slow > 1 && ratio > 0.75) {
-      ratio = Math.max(0.75, ratio - 0.25);
+    if (slow > 1 && ratio > minRatio) {
+      ratio = Math.max(minRatio, ratio - 0.25);
       renderer.setPixelRatio(ratio);
       resize();
       slow = 0;
-    } else if (smooth > 8 && ratio < maxRatio) {
+    } else if (!lowPower && smooth > 8 && ratio < maxRatio) {
       ratio = Math.min(maxRatio, ratio + 0.25);
       renderer.setPixelRatio(ratio);
       resize();
