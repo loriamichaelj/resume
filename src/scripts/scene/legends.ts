@@ -6,8 +6,7 @@ import { createLugia } from "./lugia";
 // UFOs' (cloud.ts): Ho-Oh and Lugia, always on
 // opposite sides of the cloud (the same angular speed, half a turn apart).
 // They leave at night, when the UFOs come out. Each faces along its orbit,
-// banks into the turn and pitches with its wingbeats. Clicking one opens its
-// trading card (see pick()).
+// banks into the turn and pitches with its wingbeats.
 // While on the far side of the cloud a bird draws before it, so the cloud's
 // mist really covers it; on the near side it draws after the cloud and face.
 // Coordinates are in the cloud's root space (the cloud is ~2 wide).
@@ -23,7 +22,6 @@ export type LegendsFrame = {
   dt: number;
   day: number; // 0 night .. 1 day
   visible: number; // 0..1: the cloud's own visibility (ghosted behind cards)
-  worldScale: number;
   light: THREE.Vector3; // toward the sun or moon, world space
   rootZ: number; // the cloud's world z, to tell near side from far
 };
@@ -34,8 +32,6 @@ export function createLegends(opts: { detail: number; glow: THREE.Texture }) {
   const birds = [
     {
       ...createHoOh(opts.detail),
-      // 2000 Neo Revelation Holo Ho-Oh #7, PSA 10.
-      url: "https://www.fanaticscollect.com/buy-now/04d1052d-dbc8-473c-a604-e4a2edff2f00",
       radius: 1.5,
       phase: PHASE,
       tilt: 0.24,
@@ -48,8 +44,6 @@ export function createLegends(opts: { detail: number; glow: THREE.Texture }) {
     },
     {
       ...createLugia(opts.detail),
-      // 2013 Plasma Storm Full Art Holo Lugia EX #134, PSA 10.
-      url: "https://www.fanaticscollect.com/buy-now/02b436ab-8a5f-47e8-a9f7-5b913fa0505d",
       radius: 1.6,
       phase: PHASE + Math.PI,
       tilt: -0.2,
@@ -84,14 +78,12 @@ export function createLegends(opts: { detail: number; glow: THREE.Texture }) {
     aura.scale.setScalar(b.glowSize);
     carrier.add(aura);
     group.add(plane);
-    return { ...b, plane, carrier, aura, vis: 0, behind: false };
+    return { ...b, plane, carrier, aura, vis: 0 };
   });
 
   const world = new THREE.Vector3();
-  let worldScale = 1;
 
   function update(f: LegendsFrame) {
-    worldScale = f.worldScale;
     for (const b of birds) {
       b.vis = THREE.MathUtils.damp(b.vis, f.day > 0.5 ? 1 : 0, 2.5, f.dt);
       const opacity = b.vis * f.visible;
@@ -118,37 +110,10 @@ export function createLegends(opts: { detail: number; glow: THREE.Texture }) {
       // Near or far side of the cloud decides the draw order.
       b.carrier.getWorldPosition(world);
       const behind = world.z < f.rootZ;
-      b.behind = behind;
       b.skin.setOrder(behind ? BEHIND : IN_FRONT);
       b.aura.renderOrder = (behind ? BEHIND : IN_FRONT) - 0.5;
     }
   }
 
-  // The bird under a point on the canvas (px), if any: the nearest one whose
-  // body and inner wings, projected to the screen, cover it.
-  const centre = new THREE.Vector3();
-  const edge = new THREE.Vector3();
-  function pick(x: number, y: number, camera: THREE.Camera, width: number, height: number) {
-    let best: { url: string; behind: boolean } | null = null;
-    let bestDist = Infinity;
-    for (const b of birds) {
-      if (!b.plane.visible || b.vis < 0.5) continue;
-      b.carrier.getWorldPosition(centre);
-      // About the reach of the inner wings, in world units.
-      const reach = 1.3 * b.scale * worldScale;
-      edge.setFromMatrixColumn(camera.matrixWorld, 0).multiplyScalar(reach).add(centre).project(camera);
-      centre.project(camera);
-      const cx = (centre.x * 0.5 + 0.5) * width;
-      const cy = (-centre.y * 0.5 + 0.5) * height;
-      const r = Math.hypot((edge.x - centre.x) * 0.5 * width, (edge.y - centre.y) * 0.5 * height);
-      const d = Math.hypot(x - cx, y - cy);
-      if (d < r && d < bestDist) {
-        bestDist = d;
-        best = { url: b.url, behind: b.behind };
-      }
-    }
-    return best;
-  }
-
-  return { object: group, update, pick };
+  return { object: group, update };
 }
