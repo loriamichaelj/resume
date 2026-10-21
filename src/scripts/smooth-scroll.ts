@@ -45,5 +45,6 @@ document.addEventListener("click", (e) => {
   const y = Math.max(0, scrollTarget(section));
   if (lenis) lenis.scrollTo(y, { duration: 1.4 });
   else window.scrollTo({ top: y, behavior: "auto" });
-  history.replaceState(null, "", `#${id}`);
+  // Keep the address bar clean: no #about etc. (also clears a hash the visitor arrived with).
+  history.replaceState(null, "", location.pathname + location.search);
 });
