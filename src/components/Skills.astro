@@ -1,6 +1,7 @@
 ---
 import { skills } from "../data/site";
 import SectionHeading from "./SectionHeading.astro";
+import Icon from "./Icon.astro";
 ---
 
 <section id="skills" class="relative scroll-mt-24 py-24 sm:py-32">
@@ -21,16 +22,26 @@ import SectionHeading from "./SectionHeading.astro";
       {
         skills.map((group, i) => (
           <div class="reveal" data-reveal="scale" data-delay={`${(i % 2) * 90}`}>
-            <div class="card-surface h-full p-6" data-tilt="6">
-              <h3 class="flex items-center gap-2.5 font-mono text-xs uppercase tracking-[0.2em] text-white/55">
+            <div
+              class="card-surface skill-card flex h-full items-center p-6"
+              data-tilt="6"
+              data-skill-card
+              role="button"
+              tabindex="0"
+              aria-haspopup="dialog"
+              aria-label={`${group.label}: show details`}
+            >
+              <span class="skill-expand" aria-hidden="true">
+                <Icon name="expand" class="h-3.5 w-3.5" />
+              </span>
+              <h3 class="flex items-center gap-3 pr-10 font-display text-lg font-semibold tracking-tight text-white">
                 <span class="h-1.5 w-1.5 rounded-full bg-brand-gradient shadow-[0_0_12px_rgb(var(--c-rose)_/_0.9)]" />
                 {group.label}
               </h3>
-              <ul class="mt-4 flex flex-wrap gap-2">
+              {/* The card face is just the title; the items stay in the markup (hidden) for the expanded card to read. */}
+              <ul hidden>
                 {group.items.map((item) => (
-                  <li class="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-sm text-white/80 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/[0.07] hover:text-white">
-                    {item}
-                  </li>
+                  <li>{item}</li>
                 ))}
               </ul>
             </div>
@@ -40,3 +51,27 @@ import SectionHeading from "./SectionHeading.astro";
     </div>
   </div>
 </section>
+
+<!-- The floating card a skill group expands into (src/scripts/skill-card.ts) -->
+<div id="skill-overlay" class="skill-overlay" data-overlay hidden>
+  <div class="skill-backdrop" data-skill-backdrop></div>
+  <div class="skill-panel" role="dialog" aria-modal="true" aria-labelledby="skill-title" tabindex="-1" data-skill-panel>
+    <div class="skill-head flex items-start justify-between gap-4" data-skill-head>
+      <div>
+        <p class="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.25em] text-white/50">
+          <span class="h-1.5 w-1.5 rounded-full bg-brand-gradient shadow-[0_0_12px_rgb(var(--c-rose)_/_0.9)]"></span>
+          <span data-skill-count></span>
+        </p>
+        <h3 id="skill-title" class="mt-2 font-display text-2xl font-semibold text-white sm:text-3xl" data-skill-title></h3>
+      </div>
+      <button type="button" class="icon-glass flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/80 hover:text-white" aria-label="Close" data-skill-close>
+        <Icon name="close" class="h-[18px] w-[18px]" />
+      </button>
+    </div>
+    <ul class="skill-list" data-skill-list data-lenis-prevent></ul>
+  </div>
+</div>
+
+<script>
+  import "../scripts/skill-card";
+</script>

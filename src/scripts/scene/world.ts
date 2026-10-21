@@ -162,7 +162,7 @@ export function createWorld(canvas: HTMLCanvasElement) {
   document.documentElement.addEventListener("pointerleave", () => (pointer.active = false));
   // A click on the cloud sets off its storm, unless it lands on something
   // interactive in front of it (a link, a button, a tag, the definition card).
-  const INTERACTIVE = "a, button, input, select, textarea, label, [role='dialog']";
+  const INTERACTIVE = "a, button, input, select, textarea, label, [role='dialog'], [role='button'], [data-overlay]";
   window.addEventListener(
     "pointerdown",
     (e) => {
