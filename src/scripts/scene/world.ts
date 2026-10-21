@@ -106,6 +106,7 @@ export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
   // Under reduced motion the still frame is redrawn once the cloud can show.
   const cloud = createCloud({
     quality: quality.cloud,
+    detail: lowPower ? 0.6 : 1,
     light,
     labels,
     onReady: () => reduceMotion && renderStatic(),
@@ -161,9 +162,22 @@ export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
   window.addEventListener("load", placeNetworks);
 
   // ---- Input -------------------------------------------------------------------
+  // The canvas is fixed at the viewport origin (except under reduced motion).
+  const fixedRect = new DOMRect(0, 0, 0, 0);
   const pointer = { x: 0, y: 0, nx: 0, ny: 0, active: false };
   // When anything last moved (pointer, scroll, a click), for the idle throttle.
   let lastInput = performance.now();
+  const INTERACTIVE = "a, button, input, select, textarea, label, [role='dialog'], [role='button'], [data-overlay]";
+  const overInteractive = (e: Event) => !!(e.target as Element | null)?.closest?.(INTERACTIVE);
+  // The legendary bird (its trading card's URL) under the pointer, if any.
+  // Canvas coordinates: the canvas is fixed at the viewport origin, so it's
+  // only measured under reduced motion, where it scrolls away (measuring on
+  // every pointer move would force layouts mid-scroll).
+  const legendAt = (e: PointerEvent | MouseEvent) => {
+    if (overInteractive(e)) return null;
+    const r = reduceMotion ? canvas.getBoundingClientRect() : fixedRect;
+    return cloud.pickLegend(e.clientX - r.left, e.clientY - r.top);
+  };
   window.addEventListener(
     "pointermove",
     (e) => {
@@ -173,23 +187,30 @@ export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
       pointer.nx = (e.clientX / window.innerWidth) * 2 - 1;
       pointer.ny = (e.clientY / window.innerHeight) * 2 - 1;
       pointer.active = e.pointerType === "mouse";
+      // A pointer cursor over Ho-Oh or Lugia: they're links.
+      if (pointer.active) document.documentElement.classList.toggle("over-legend", !!legendAt(e));
     },
     { passive: true },
   );
   document.documentElement.addEventListener("pointerleave", () => (pointer.active = false));
   window.addEventListener("keydown", () => (lastInput = performance.now()), { passive: true });
-  // A click on the cloud sets off its storm, unless it lands on something
-  // interactive in front of it (a link, a button, a tag, the definition card).
-  const INTERACTIVE = "a, button, input, select, textarea, label, [role='dialog'], [role='button'], [data-overlay]";
+  // A click on the cloud sets off its storm (or tickles it by day), unless it
+  // lands on something interactive in front of it (a link, a button, a tag,
+  // the definition card) or on one of the legendary birds, which open their
+  // trading card instead.
   window.addEventListener(
     "pointerdown",
     (e) => {
       lastInput = performance.now();
-      if ((e.target as Element | null)?.closest?.(INTERACTIVE)) return;
+      if (overInteractive(e) || legendAt(e)) return;
       cloud.poke(e.clientX, e.clientY);
     },
     { passive: true },
   );
+  window.addEventListener("click", (e) => {
+    const url = legendAt(e);
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+  });
 
   // ---- Theme -------------------------------------------------------------------
   function applyTheme() {
@@ -209,8 +230,6 @@ export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
   let progress = 0;
   let roll = 0;
 
-  // The canvas is fixed at the viewport origin (except under reduced motion).
-  const fixedRect = new DOMRect(0, 0, 0, 0);
   const lightDir = new THREE.Vector3();
   const smoothLight = new THREE.Vector3(0.45, 0.85, 0.4).normalize();
 

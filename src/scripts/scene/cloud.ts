@@ -5,14 +5,18 @@ import type { CloudTarget } from "./anchors";
 import { createUfo, MAX_HEALTH } from "./ufo";
 import { createLightning } from "./lightning";
 import { createFace } from "./face";
+import { createRainbow } from "./rainbow";
+import { createLegends } from "./legends";
 import type { Quality } from "./quality";
 
 // A volumetric cumulus, ray-marched on the GPU inside a box. Its shape is a
 // soft union of spheres with a flattened base, eroded by baked 3D noise into
 // billows and wisps, and lit with self-shadowing toward a sun up and to the
 // right. It has a face and moods: happy and relaxed, grumpy while it storms.
-// Three little UFOs (AWS, Azure, GCP) orbit it; clicking the cloud throws
-// lightning at them until they're destroyed (they respawn later).
+// Three little UFOs (AWS, Azure, GCP) orbit it; clicking the cloud at night
+// throws lightning at them until they're destroyed (they respawn later). By
+// day a click tickles it instead: it giggles and casts a rainbow. Ho-Oh
+// and Lugia circle it too by day (legends.ts).
 
 // Sphere lobes in the cloud's local space (x, y, z, radius). A flat-ish row
 // underneath, billows on top, and two lobes front and back for depth.
@@ -277,6 +281,7 @@ export type CloudFrame = {
 
 export function createCloud(opts: {
   quality: Quality["cloud"];
+  detail: number; // modelling detail for the legendary birds (1 = full)
   light: boolean;
   labels: HTMLElement[];
   onReady?: () => void;
@@ -323,6 +328,9 @@ export function createCloud(opts: {
     transparent: true,
     premultipliedAlpha: true,
     depthWrite: false,
+    // The legendary birds write depth while flying behind the cloud; its mist
+    // must still cover them, so the volume ignores depth.
+    depthTest: false,
     side: THREE.BackSide,
   });
 
@@ -369,8 +377,15 @@ export function createCloud(opts: {
   const face = createFace();
   root.add(face.object);
 
+  // In daylight a tap tickles the cloud instead: it giggles and casts a rainbow.
+  const rainbow = createRainbow();
+  root.add(rainbow.object);
+
   // ---- Orbiting provider UFOs ---------------------------------------------
   const glow = glowTexture();
+  // Ho-Oh and Lugia on their own wide orbits.
+  const legends = createLegends({ detail: opts.detail, glow });
+  root.add(legends.object);
   const orbits = new THREE.Group();
   root.add(orbits);
   const ufos = ORBS.map((o) => {
@@ -429,7 +444,12 @@ export function createCloud(opts: {
   let stormTime = 0; // seconds of storm left after a click
   let nextStrike = 0;
   let shake = 0;
-  // Mood: happy and relaxed by default, grumpy while it storms.
+  // Tickled (light mode): a giggle, and a jelly bounce on an underdamped spring.
+  let giggle = 0;
+  let giggleTime = 0; // seconds of giggling left after a tap
+  let jelly = 0;
+  let jellyV = 0;
+  // Mood: happy and relaxed by default, grumpy while it storms, giggly when tickled.
   const mood = {
     anger: 0,
     squint: 0,
@@ -452,6 +472,7 @@ export function createCloud(opts: {
   let alpha = 0;
   let labelsAlpha = 0;
   // The UFOs are night visitors: they fade away in light mode.
+  let light = opts.light;
   let fleetTarget = opts.light ? 0 : 1;
   let fleetVis = fleetTarget;
   let lastX = 0;
@@ -467,7 +488,8 @@ export function createCloud(opts: {
     opts.onReady?.();
   });
 
-  function setTheme(light: boolean) {
+  function setTheme(l: boolean) {
+    light = l;
     fleetTarget = light ? 0 : 1;
     const t = light ? THEMES.light : THEMES.dark;
     uniforms.uSun.value.set(t.sun);
@@ -612,6 +634,19 @@ export function createCloud(opts: {
     body.position.x = (Math.random() - 0.5) * 0.045 * shake;
     body.position.y += (Math.random() - 0.5) * 0.03 * shake;
 
+    giggleTime = Math.max(0, giggleTime - dt);
+    giggle = damp(giggle, giggleTime > 0 ? 1 : 0, giggleTime > 0 ? 8 : 2.5, dt);
+
+    // Jelly: stretches up, squashes down, settling in a few wobbles; plus a
+    // giggly rock from side to side.
+    jellyV += (-180 * jelly - 9 * jellyV) * dt;
+    jelly += jellyV * dt;
+    body.scale.x *= 1 - jelly * 0.06;
+    body.scale.z *= 1 - jelly * 0.06;
+    body.scale.y *= 1 + jelly * 0.12;
+    body.position.y += jelly * 0.05;
+    body.rotation.z += Math.sin(time * 22) * 0.035 * giggle;
+
     // Lightning aimed at a UFO lands when its stroke arrives.
     lastFrame = f;
     for (let i = pendingHits.length - 1; i >= 0; i--) {
@@ -629,6 +664,17 @@ export function createCloud(opts: {
 
     // UFOs: fade while flying behind the cloud.
     fleetVis = damp(fleetVis, fleetTarget, 3, dt);
+    // The rainbow is a daytime thing, and hides when the cloud ghosts behind cards.
+    rainbow.update(dt, time, root.scale.x, smoothstep((alpha - 0.3) / 0.5) * (1 - fleetVis));
+    legends.update({
+      time,
+      dt,
+      day: 1 - fleetVis,
+      visible: smoothstep((alpha - 0.3) / 0.5),
+      worldScale: root.scale.x,
+      light: sunWorld,
+      rootZ: root.position.z,
+    });
     orbits.visible = fleetVis > 0.01;
     const fleetAlpha = smoothstep((alpha - 0.3) / 0.5) * fleetVis;
     orbits.rotation.y = time * 0.05;
@@ -693,7 +739,7 @@ export function createCloud(opts: {
       mood.squintUntil = time + 1.3;
       mood.nextSquint = time + 7 + Math.random() * 6;
     }
-    const squinting = victory || (!angry && time < mood.squintUntil);
+    const squinting = victory || giggleTime > 0 || (!angry && time < mood.squintUntil);
     mood.squint = damp(mood.squint, (squinting ? 1 : 0) * (1 - mood.anger), 8, dt);
     // Gaze: at the UFO it's attacking, else the cursor, else idly wandering.
     const prey = mood.target >= 0 ? ufos[mood.target].ufo : null;
@@ -710,9 +756,11 @@ export function createCloud(opts: {
       mood.lookGoal.set(Math.sin(time * 0.31) * 0.6, Math.sin(time * 0.23 + 1) * 0.35);
     }
     mood.look.lerp(mood.lookGoal, 1 - Math.exp(-6 * dt));
-    mood.shout = damp(mood.shout, 0, 5, dt);
+    // A giggle opens and closes the mouth: "ha-ha-ha".
+    const laugh = giggle * (0.25 + 0.3 * Math.abs(Math.sin(time * 13)));
+    mood.shout = damp(mood.shout, laugh, giggleTime > 0 ? 14 : 5, dt);
     mood.wide = damp(mood.wide, near * (1 - mood.anger), 5, dt);
-    const happy = victory ? 1 : 0.65 + 0.12 * Math.sin(time * 0.9) + 0.25 * near;
+    const happy = victory || giggleTime > 0 ? 1 : 0.65 + 0.12 * Math.sin(time * 0.9) + 0.25 * near;
     mood.smile = damp(mood.smile, THREE.MathUtils.lerp(happy, -0.35, mood.anger), 7, dt);
 
     // Grumpy: puffed up a touch, with a slight tremble.
@@ -727,6 +775,7 @@ export function createCloud(opts: {
       smile: mood.smile,
       shout: mood.shout,
       wide: mood.wide,
+      blush: giggle,
       // Only where the cloud is front and centre, not ghosted behind cards.
       opacity: smoothstep((alpha - 0.45) / 0.4),
       time,
@@ -762,7 +811,8 @@ export function createCloud(opts: {
     return best;
   }
 
-  // A click (or tap) on the cloud billows it up and sets off a storm. Each
+  // A click (or tap) on the cloud billows it up. In daylight that tickles it
+  // (see tickle()); at night it sets off a storm. Each
   // click also fires an aimed bolt at the nearest UFO, costing it one hit
   // point; the storm then rumbles on for a couple of seconds. (The cloud is
   // wider than tall, hence the squashed distance.)
@@ -770,6 +820,10 @@ export function createCloud(opts: {
     if (screen.r === 0 || alpha < 0.4) return;
     if (Math.hypot(x - screen.x, (y - screen.y) * 1.6) < screen.r * 0.9) {
       puff = 1;
+      if (light) {
+        tickle();
+        return;
+      }
       stormTime = 2.4;
       shake = 1;
       nextStrike = 0.15;
@@ -793,10 +847,38 @@ export function createCloud(opts: {
     }
   }
 
+  // Daylight: the cloud giggles, wobbles like jelly and casts a rainbow
+  // toward the middle of the screen. Taps while it's still laughing keep the
+  // rainbow up and add another bounce.
+  function tickle() {
+    giggleTime = 1.8;
+    jellyV = Math.min(jellyV + 9, 14);
+    mood.shout = 0.6;
+    rainbow.burst(root.position.x > 0 ? -1 : 1);
+  }
+
+  // The trading card of the legendary bird under a canvas point, if any. A bird
+  // on the far side of the cloud can't be clicked through it.
+  function pickLegend(x: number, y: number): string | null {
+    if (!lastFrame) return null;
+    const hit = legends.pick(x, y, lastFrame.camera, lastFrame.width, lastFrame.height);
+    if (!hit) return null;
+    const onCloud = alpha > 0.4 && Math.hypot(x - screen.x, (y - screen.y) * 1.6) < screen.r * 0.9;
+    return hit.behind && onCloud ? null : hit.url;
+  }
+
   // Nothing playing out that needs the full frame rate: no storm, bolts or
-  // strikes still on their way.
+  // strikes still on their way, no giggle or rainbow.
   function calm() {
-    return stormTime === 0 && storm < 0.01 && shake < 0.01 && pendingHits.length === 0;
+    return (
+      stormTime === 0 &&
+      storm < 0.01 &&
+      shake < 0.01 &&
+      pendingHits.length === 0 &&
+      giggleTime === 0 &&
+      Math.abs(jelly) < 0.01 &&
+      rainbow.idle()
+    );
   }
 
   // Where the light comes from (world space, normalised).
@@ -851,7 +933,8 @@ export function createCloud(opts: {
   // Point sprite sizes depend on the canvas height (in device pixels).
   function resize(heightPx: number, fov: number) {
     for (const o of ufos) o.ufo.resize(heightPx, fov);
+    rainbow.resize(heightPx, fov);
   }
 
-  return { object: root, update, render, calm, setTheme, poke, resize, setResolution, setLightDir };
+  return { object: root, update, render, calm, setTheme, poke, pickLegend, resize, setResolution, setLightDir };
 }

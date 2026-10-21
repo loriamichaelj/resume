@@ -159,6 +159,10 @@
   html.webgl .scene-canvas {
     opacity: 1;
   }
+  /* Over Ho-Oh or Lugia in the backdrop: they open their trading card. */
+  html.over-legend {
+    cursor: pointer;
+  }
   /* Reduced motion: a still frame at the top of the page that scrolls away. */
   .scene-canvas.is-static {
     position: absolute;
