@@ -5,7 +5,8 @@ import * as THREE from "three";
 // smoothly between expressions. cloud.ts drives it: happy and relaxed by
 // default (smiling, blinking, glancing around, the odd happy squint), grumpy
 // while it storms (a gentle frown of the brows, slightly narrowed eyes, a
-// pout and a small anger mark), shouting as it fires, and smug after a win.
+// pout and a small anger mark), shouting as it fires, smug after a win, and
+// giggling and rosy-cheeked when tickled in daylight.
 
 export type Expression = {
   anger: number; // 0 happy .. 1 furious
@@ -15,6 +16,7 @@ export type Expression = {
   smile: number; // mouth curve: 1 big smile .. -1 deep frown
   shout: number; // 0 closed .. 1 wide open
   wide: number; // 0 normal .. 1 eyes wide (curious)
+  blush: number; // 0 normal .. 1 extra rosy cheeks
   opacity: number;
   time: number;
 };
@@ -35,6 +37,7 @@ const fragmentShader = /* glsl */ `
   uniform float uSmile;
   uniform float uShout;
   uniform float uWide;
+  uniform float uBlushing;
   uniform float uOpacity;
   uniform float uTime;
   uniform vec3 uInk;
@@ -82,11 +85,12 @@ const fragmentShader = /* glsl */ `
     vec4 o = vec4(0.0);
     vec3 ink = mix(uInk, uInk * 0.85, uAnger);
 
-    // Rosy cheeks, fading out as it gets angry.
+    // Rosy cheeks, fading out as it gets angry and glowing when tickled.
     for (int s = -1; s <= 1; s += 2) {
       vec2 q = p - vec2(float(s) * 0.5, -0.08);
-      float b = exp(-dot(q / vec2(0.13, 0.07), q / vec2(0.13, 0.07)));
-      o = over(o, uBlush, b * 0.45 * (1.0 - 0.5 * uAnger));
+      vec2 r = vec2(0.13, 0.07) * (1.0 + 0.2 * uBlushing);
+      float b = exp(-dot(q / r, q / r));
+      o = over(o, uBlush, b * (0.45 + 0.4 * uBlushing) * (1.0 - 0.5 * uAnger));
     }
 
     // Eyes.
@@ -159,6 +163,7 @@ export function createFace() {
     uSmile: { value: 0.8 },
     uShout: { value: 0 },
     uWide: { value: 0 },
+    uBlushing: { value: 0 },
     uOpacity: { value: 0 },
     uTime: { value: 0 },
     uInk: { value: new THREE.Color("#2a1d5e") },
@@ -190,6 +195,7 @@ export function createFace() {
     uniforms.uSmile.value = e.smile;
     uniforms.uShout.value = e.shout;
     uniforms.uWide.value = e.wide;
+    uniforms.uBlushing.value = e.blush;
     uniforms.uOpacity.value = e.opacity;
     uniforms.uTime.value = e.time;
   }

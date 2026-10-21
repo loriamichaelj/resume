@@ -31,7 +31,10 @@ export type Quality = {
   start: number; // LEVELS index to begin at
   max: number; // highest LEVELS index to climb to
   maxFps: number; // 0: the display's own rate
-  idleFps: number; // while nothing on the page moves; 0: no throttling
+  // While nothing on the page moves; 0: no throttling. The birds keep flying
+  // and the cloud keeps drifting, so anything under 60 shows as stutter: only
+  // the low tier trades that for battery and heat.
+  idleFps: number;
 };
 
 const TIERS: Record<Tier, Omit<Quality, "tier" | "gpu" | "touch">> = {
@@ -49,7 +52,7 @@ const TIERS: Record<Tier, Omit<Quality, "tier" | "gpu" | "touch">> = {
     start: 4,
     max: 6,
     maxFps: 0,
-    idleFps: 30,
+    idleFps: 60, // a no-op at 60 Hz; halves idle work on 120 Hz screens
   },
   high: {
     antialias: true,
