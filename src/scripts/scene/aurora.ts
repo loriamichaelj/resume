@@ -118,12 +118,12 @@ export function createAurora(opts: { light: boolean }) {
   mesh.frustumCulled = false;
   mesh.renderOrder = -100;
 
-  let intensity = opts.light ? 0.34 : 0.44;
+  let intensity = opts.light ? 0.34 : 0.3;
   const tmp = new THREE.Color();
   const slots = [uniforms.uC1, uniforms.uC2, uniforms.uC3, uniforms.uC4];
 
   function setTheme(light: boolean) {
-    intensity = light ? 0.34 : 0.44;
+    intensity = light ? 0.34 : 0.3;
     sections = light ? LIGHT_SECTIONS : DARK_SECTIONS;
   }
 

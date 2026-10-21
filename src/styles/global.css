@@ -24,8 +24,8 @@
   :root {
     color-scheme: dark;
     --c-fg: 255 255 255; /* foreground / text  -> Tailwind `white` */
-    --c-ink-950: 6 6 20; /* page background    -> Tailwind `ink-950` */
-    --c-ink-900: 14 13 34; /* elevated card bg  -> Tailwind `ink-900` */
+    --c-ink-950: 3 3 11; /* page background    -> Tailwind `ink-950` */
+    --c-ink-900: 9 8 23; /* elevated card bg  -> Tailwind `ink-900` */
     --c-edge: 255 255 255; /* hairline / card-border highlight */
     --c-orb-1: 123 97 255; /* fallback backdrop orbs (no WebGL) */
     --c-orb-2: 255 95 162;
