@@ -5,7 +5,6 @@ import type { CloudTarget } from "./anchors";
 import { createUfo, MAX_HEALTH } from "./ufo";
 import { createLightning } from "./lightning";
 import { createFace } from "./face";
-import { createLegends } from "./legends";
 import type { Quality } from "./quality";
 
 // A volumetric cumulus, ray-marched on the GPU inside a box. Its shape is a
@@ -14,8 +13,7 @@ import type { Quality } from "./quality";
 // right. It has a face and moods: happy and relaxed, grumpy while it storms.
 // Three little UFOs (AWS, Azure, GCP) orbit it; clicking the cloud at night
 // throws lightning at them until they're destroyed (they respawn later). By
-// day a click tickles it instead: it giggles and wobbles. Ho-Oh and Lugia
-// circle it too by day (legends.ts).
+// day a click tickles it instead: it giggles and wobbles.
 
 // Sphere lobes in the cloud's local space (x, y, z, radius). A flat-ish row
 // underneath, billows on top, and two lobes front and back for depth.
@@ -280,7 +278,6 @@ export type CloudFrame = {
 
 export function createCloud(opts: {
   quality: Quality["cloud"];
-  detail: number; // modelling detail for the legendary birds (1 = full)
   light: boolean;
   labels: HTMLElement[];
   onReady?: () => void;
@@ -327,9 +324,6 @@ export function createCloud(opts: {
     transparent: true,
     premultipliedAlpha: true,
     depthWrite: false,
-    // The legendary birds write depth while flying behind the cloud; its mist
-    // must still cover them, so the volume ignores depth.
-    depthTest: false,
     side: THREE.BackSide,
   });
 
@@ -378,9 +372,6 @@ export function createCloud(opts: {
 
   // ---- Orbiting provider UFOs ---------------------------------------------
   const glow = glowTexture();
-  // Ho-Oh and Lugia on their own wide orbits.
-  const legends = createLegends({ detail: opts.detail, glow });
-  root.add(legends.object);
   const orbits = new THREE.Group();
   root.add(orbits);
   const ufos = ORBS.map((o) => {
@@ -659,14 +650,6 @@ export function createCloud(opts: {
 
     // UFOs: fade while flying behind the cloud.
     fleetVis = damp(fleetVis, fleetTarget, 3, dt);
-    legends.update({
-      time,
-      dt,
-      day: 1 - fleetVis,
-      visible: smoothstep((alpha - 0.3) / 0.5),
-      light: sunWorld,
-      rootZ: root.position.z,
-    });
     orbits.visible = fleetVis > 0.01;
     const fleetAlpha = smoothstep((alpha - 0.3) / 0.5) * fleetVis;
     orbits.rotation.y = time * 0.05;
