@@ -106,7 +106,6 @@ export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
   // Under reduced motion the still frame is redrawn once the cloud can show.
   const cloud = createCloud({
     quality: quality.cloud,
-    detail: lowPower ? 0.6 : 1,
     light,
     labels,
     onReady: () => reduceMotion && renderStatic(),
