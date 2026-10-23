@@ -100,4 +100,7 @@ if (card && raw) {
   });
 
   window.addEventListener("resize", () => current && place(current));
+  // Tags inside a scrolling list (the expanded Stack and Services cards) move
+  // without the page scrolling, so follow them.
+  document.addEventListener("scroll", () => current && place(current), { capture: true, passive: true });
 }
