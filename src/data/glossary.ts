@@ -210,11 +210,30 @@ export const glossary: Record<string, Term> = {
       },
     ],
   },
-  "Azure CLI": {
+  "aws cli": {
+    category: "AWS · Tooling",
+    definition:
+      "The AWS CLI is Amazon's command-line tool for managing every AWS service with aws commands. Anything you can do in the console can be scripted, from launching instances to syncing files to S3. It is the usual way to automate AWS in shell scripts and CI pipelines.",
+    docs: [{ label: "AWS CLI docs", url: "https://docs.aws.amazon.com/cli/" }],
+  },
+  "gcloud cli": {
+    category: "Google Cloud · Tooling",
+    definition:
+      "The gcloud CLI is Google Cloud's command-line tool for creating and managing resources such as VMs, GKE clusters and IAM. It is part of the Google Cloud SDK, alongside gsutil and bq. Scripts and CI pipelines use it to automate deployments and configuration.",
+    docs: [{ label: "gcloud CLI docs", url: "https://cloud.google.com/sdk/gcloud" }],
+  },
+  kubectl: {
+    category: "Kubernetes · Tooling",
+    definition:
+      "kubectl is the command-line tool for talking to a Kubernetes cluster's API. It applies manifests, inspects pods, reads logs, opens shells in containers and rolls deployments forward or back. Contexts in a kubeconfig file switch it between clusters, such as EKS, AKS and GKE.",
+    docs: [{ label: "kubectl reference", url: "https://kubernetes.io/docs/reference/kubectl/" }],
+  },
+  "az cli": {
     category: "Azure · Tooling",
     definition:
       "The Azure CLI is Microsoft's command-line tool for creating and managing Azure resources. Every action available in the portal can be scripted with az commands. That makes deployments repeatable and easy to automate in shell scripts and CI pipelines.",
     docs: [{ label: "Azure CLI docs", url: "https://learn.microsoft.com/en-us/cli/azure/" }],
+    aliases: ["Azure CLI"],
   },
   Bash: {
     category: "Shell scripting",
