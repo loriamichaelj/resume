@@ -1,7 +1,21 @@
 ---
 import { skills } from "../data/site";
+import { lookup } from "../data/glossary";
 import SectionHeading from "./SectionHeading.astro";
 import Icon from "./Icon.astro";
+
+// "Terraform / OpenTofu (Modules, State)" -> a name pill and a pill per
+// detail. A detail is looked up with its name first ("Azure Storage"), so a
+// word like "Storage" gets the definition for the right cloud.
+function pills(text: string) {
+  const m = text.match(/^([^(]+?)\s*\((.+)\)$/);
+  const name = m ? m[1] : text;
+  const details = m ? m[2].split(/,\s*/) : [];
+  return [
+    { text: name, isName: true, entry: lookup(name) },
+    ...details.map((d) => ({ text: d, isName: false, entry: lookup(`${name} ${d}`) ?? lookup(d) })),
+  ];
+}
 ---
 
 <section id="skills" class="relative scroll-mt-24 py-24 sm:py-32">
@@ -38,12 +52,27 @@ import Icon from "./Icon.astro";
                 <span class="h-1.5 w-1.5 rounded-full bg-brand-gradient shadow-[0_0_12px_rgb(var(--c-rose)_/_0.9)]" />
                 {group.label}
               </h3>
-              {/* The card face is just the title; the items stay in the markup (hidden) for the expanded card to read. */}
-              <ul hidden>
-                {group.items.map((item) => (
-                  <li>{item}</li>
+              {/* The card face is just the title; the pills are copied into the expanded card. Each opens its definition. */}
+              <template data-skill-details>
+                {group.items.flatMap(pills).map((p) => (
+                  <li>
+                    {p.entry ? (
+                      <button
+                        type="button"
+                        class:list={["skill-tag", { "is-name": p.isName }]}
+                        data-term={p.entry.key}
+                        aria-haspopup="dialog"
+                        aria-expanded="false"
+                        aria-controls="term-card"
+                      >
+                        {p.text}
+                      </button>
+                    ) : (
+                      <span class:list={["skill-tag", { "is-name": p.isName }]}>{p.text}</span>
+                    )}
+                  </li>
                 ))}
-              </ul>
+              </template>
             </div>
           </div>
         ))
@@ -54,17 +83,17 @@ import Icon from "./Icon.astro";
 
 <!-- The floating card a skill group expands into (src/scripts/skill-card.ts) -->
 <div id="skill-overlay" class="skill-overlay" data-overlay hidden>
-  <div class="skill-backdrop" data-skill-backdrop></div>
-  <div class="skill-panel" role="dialog" aria-modal="true" aria-labelledby="skill-title" tabindex="-1" data-skill-panel>
+  <div class="skill-backdrop" data-expand-backdrop></div>
+  <div class="skill-panel" role="dialog" aria-modal="true" aria-labelledby="skill-title" tabindex="-1" data-expand-panel>
     <div class="skill-head flex items-start justify-between gap-4" data-skill-head>
       <div>
         <p class="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.25em] text-white/50">
           <span class="h-1.5 w-1.5 rounded-full bg-brand-gradient shadow-[0_0_12px_rgb(var(--c-rose)_/_0.9)]"></span>
-          <span data-skill-count></span>
+          Stack
         </p>
         <h3 id="skill-title" class="mt-2 font-display text-2xl font-semibold text-white sm:text-3xl" data-skill-title></h3>
       </div>
-      <button type="button" class="icon-glass flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/80 hover:text-white" aria-label="Close" data-skill-close>
+      <button type="button" class="icon-glass flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/80 hover:text-white" aria-label="Close" data-expand-close>
         <Icon name="close" class="h-[18px] w-[18px]" />
       </button>
     </div>

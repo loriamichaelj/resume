@@ -129,21 +129,24 @@ if (marqueeRows.length && "IntersectionObserver" in window) {
     marqueeRows[0].row.parentElement!,
   );
 }
-// The band eases to a stop while hovered, while a pill has focus, or while one
-// of its definition cards is open, so a pill stays put to be clicked or read.
+// The band keeps moving under the pointer, but eases to a stop while a pill
+// has keyboard focus or one of its definition cards is open, so the card stays
+// beside its pill to be read.
 const marqueeBand = marqueeRows[0]?.row.closest("section") ?? null;
-let marqueeHover = false;
 let marqueeFlow = 1;
-if (marqueeBand) {
-  marqueeBand.addEventListener("pointerenter", (e) => (marqueeHover = e.pointerType === "mouse"));
-  marqueeBand.addEventListener("pointerleave", () => (marqueeHover = false));
-}
 const marqueeHeld = () =>
-  !!marqueeBand &&
-  (marqueeHover || marqueeBand.matches(":focus-within") || !!marqueeBand.querySelector('[aria-expanded="true"]'));
+  !!marqueeBand && !!marqueeBand.querySelector(':focus-visible, [aria-expanded="true"]');
 
 function measureMarquee() {
-  for (const m of marqueeRows) m.half = m.track.scrollWidth / 2;
+  for (const m of marqueeRows) {
+    const half = m.track.scrollWidth / 2;
+    // Each row starts at a random point in its loop, so every visit opens on
+    // different tools. Later measurements (fonts loading, resizes) keep the
+    // row at the same relative place.
+    m.x = m.half ? (m.x / m.half) * half : -Math.random() * half;
+    m.half = half;
+    m.track.style.transform = `translate3d(${m.x.toFixed(2)}px, 0, 0)`;
+  }
 }
 measureMarquee();
 window.addEventListener("resize", measureMarquee);
@@ -246,7 +249,7 @@ function frame(_: number, dt: number) {
 
     if (marqueeVisible) {
       marqueeFlow += ((marqueeHeld() ? 0 : 1) - marqueeFlow) * (1 - Math.exp(-6 * dt));
-      const speed = (40 + Math.min(Math.abs(velocity) * 0.25, 600)) * marqueeFlow;
+      const speed = (90 + Math.min(Math.abs(velocity) * 0.25, 600)) * marqueeFlow;
       for (const m of marqueeRows) {
         if (!m.half) continue;
         m.x -= speed * dt * m.dir * direction;

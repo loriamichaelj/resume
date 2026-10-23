@@ -583,9 +583,13 @@
   /* ---------------------------------------------------------------------------
      Marquee band (translated by motion.ts, speeds up with scroll velocity).
      ------------------------------------------------------------------------ */
+  /* The mask also clips to the row's box, so the row is padded (and pulled
+     back by the same amount) to leave room for a pill's focus ring. */
   .marquee-row {
     -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
     mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    margin-block: -4px;
+    padding-block: 4px;
   }
   .marquee-track {
     @apply flex w-max gap-4;
@@ -618,8 +622,9 @@
     background: rgb(var(--c-violet) / 0.15);
     color: rgb(var(--c-fg));
   }
+  /* Above the expanded Services card (.skill-overlay), whose tags open it too. */
   .term-card {
-    @apply absolute z-50 rounded-2xl p-5 text-left;
+    @apply absolute z-[90] rounded-2xl p-5 text-left;
     width: min(22rem, calc(100vw - 24px));
     background: rgb(var(--c-ink-900) / 0.92);
     border: 1px solid rgb(var(--c-edge) / 0.12);
@@ -750,8 +755,8 @@
   }
 
   /* ---------------------------------------------------------------------------
-     Skill cards: clicking one opens it as a large floating card
-     (src/scripts/skill-card.ts). The panel is revealed with an animated
+     Skill and service cards: clicking one opens it as a large floating card
+     (src/scripts/expand-card.ts). The panel is revealed with an animated
      clip-path that starts at the card's own rectangle.
      ------------------------------------------------------------------------ */
   .skill-card {
@@ -834,7 +839,7 @@
       padding: 2rem;
     }
   }
-  /* Spotlight that follows the pointer (--mx / --my set by skill-card.ts). */
+  /* Spotlight that follows the pointer (--mx / --my set by expand-card.ts). */
   .skill-panel::before {
     content: "";
     position: absolute;
@@ -868,9 +873,22 @@
     }
   }
   .skill-head,
-  .skill-list {
+  .skill-list,
+  .service-body {
     position: relative;
     z-index: 1;
+  }
+  /* A service's description, tool tags and links, scrolling if it's tall. */
+  .service-body {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    gap: 1.5rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    margin: -0.25rem;
+    padding: 0.25rem;
   }
   /* Everything is a pill, flowing together. The tool names (AWS, Docker, ...)
      are the same shape, just a touch brighter, so they still lead their tags. */
@@ -883,14 +901,22 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    margin: 0 -0.25rem;
-    padding: 0 0.25rem 0.25rem;
+    margin: -0.25rem;
+    padding: 0.25rem;
   }
   .skill-tag {
     @apply rounded-full border border-white/15 bg-white/[0.07] px-3.5 py-1.5 text-sm leading-snug text-white/80;
   }
   .skill-tag.is-name {
     @apply border-white/25 bg-white/[0.12] font-medium text-white;
+  }
+  button.skill-tag {
+    @apply cursor-pointer transition-colors hover:border-white/40 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet/60;
+  }
+  button.skill-tag[aria-expanded="true"] {
+    border-color: rgb(var(--c-violet) / 0.6);
+    background: rgb(var(--c-violet) / 0.15);
+    color: rgb(var(--c-fg));
   }
 
   /* ---------------------------------------------------------------------------

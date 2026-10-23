@@ -62,26 +62,26 @@ const lastChars = [...lastName];
           See my projects
           <Icon name="arrow" class="h-4 w-4 transition-transform group-hover:translate-x-1" />
         </a>
-      </div>
 
-      <ul class="reveal mt-10 flex items-center gap-3" data-delay="1060">
-        {
-          socials.map((s) => (
-            <li>
-              <a
-                href={s.href}
-                target={s.icon === "email" ? undefined : "_blank"}
-                rel="noopener noreferrer"
-                aria-label={s.label}
-                class="icon-btn"
-                data-magnetic="0.35"
-              >
-                <Icon name={s.icon} class="h-[18px] w-[18px]" />
-              </a>
-            </li>
-          ))
-        }
-      </ul>
+        <ul class="flex items-center gap-3">
+          {
+            socials.map((s) => (
+              <li>
+                <a
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={s.label}
+                  class="icon-btn"
+                  data-magnetic="0.35"
+                >
+                  <Icon name={s.icon} class="h-[18px] w-[18px]" />
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
     </div>
 
     <!--
