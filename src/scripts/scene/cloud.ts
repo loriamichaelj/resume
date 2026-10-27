@@ -222,7 +222,7 @@ const fragmentShader = /* glsl */ `
 `;
 
 const THEMES = {
-  dark: { sun: "#fff1ea", top: "#d6c8ff", bottom: "#4b2fd6", warm: PALETTE.rose, cool: PALETTE.aqua, ambient: [0.3, 0.42] },
+  dark: { sun: "#ffffff", top: "#d6e4ff", bottom: "#101a5c", warm: PALETTE.rose, cool: PALETTE.aqua, ambient: [0.3, 0.42] },
   // Light: a sunlit cloud with a warm coral underside. Shadows stay lifted,
   // because dark ones on a pale page read as a storm cloud.
   light: { sun: "#fff0d6", top: "#fffaf3", bottom: "#f7a983", warm: "#ff8f70", cool: "#ffc46b", ambient: [0.72, 0.26] },
@@ -487,7 +487,7 @@ export function createCloud(opts: {
     for (const o of ufos) o.ufo.setTheme(light);
     lightning.setTheme(light);
     face.setTheme(light);
-    uniforms.uFlashColor.value.set(light ? "#ff8a3d" : "#9cc4ff");
+    uniforms.uFlashColor.value.set(light ? "#ff8a3d" : "#ffffff");
   }
   setTheme(opts.light);
 
@@ -602,9 +602,9 @@ export function createCloud(opts: {
         if (roll < 0.55) lightning.strikeDown();
         else if (roll < 0.8) lightning.strikeSpider();
         else lightning.strikeArc();
-        if (Math.random() < 0.3) lightning.strikeArc(); // crackle alongside
-        shake = 1;
-        nextStrike = 0.12 + Math.random() * 0.4;
+        if (Math.random() < 0.12) lightning.strikeArc(); // crackle alongside
+        shake = 0.5;
+        nextStrike = 0.4 + Math.random() * 0.9;
       }
     }
 

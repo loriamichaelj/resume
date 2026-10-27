@@ -1,13 +1,13 @@
 import * as THREE from "three";
 
-// A little flying saucer for each cloud provider. A spinning metal hull with
-// panel seams, grooves and a ring of glowing portholes; a glowing equator band
-// with chasing lights; a glass dome with an antenna; a tractor
-// emitter underneath; and a flickering flame trail along the orbit. Sizes are
-// in the cloud's local units (the cloud is ~2 wide).
+// A little flying saucer for each cloud provider, drawn cartoon-style and kept
+// plain: a chunky lavender hull with banded (toon) shading, a thick dark outline
+// and a hard highlight; a flat glowing equator band; a glass dome; a tractor
+// emitter underneath; and a puffy flame trail along the orbit. No windows,
+// lights or ornaments. Sizes are in the cloud's local units (the cloud is ~2 wide).
 //
 // Each saucer has health. Lightning hits (see cloud.ts) flash and jolt it,
-// and damage builds up visibly: scorch marks, flickering lights and a
+// and damage builds up visibly: soot marks, a dimming band and a
 // trail that turns to fire. At zero it explodes, spirals down
 // and disappears, then warps back in a little later.
 
@@ -16,7 +16,6 @@ export const MAX_HEALTH = 3;
 const RESPAWN_AFTER = 12; // seconds a destroyed saucer stays gone
 const DEBRIS = 28;
 const TRAIL_POINTS = 72;
-const RIM_LIGHTS = 12;
 
 const litVertex = /* glsl */ `
   varying vec3 vNormal;
@@ -31,8 +30,8 @@ const litVertex = /* glsl */ `
   }
 `;
 
-// Polished upper hull, darker belly; radial seams, concentric grooves and a
-// ring of portholes glowing in the provider colour.
+// Cartoon hull: three flat light bands, a lavender top over a darker belly and a
+// hard white highlight. Nothing is drawn on it but soot as it takes damage.
 const hullFragment = /* glsl */ `
   uniform vec3 uAccent;
   uniform float uOpacity;
@@ -48,40 +47,25 @@ const hullFragment = /* glsl */ `
     vec3 v = normalize(vView);
     vec3 L = normalize(vec3(0.4, 0.9, 0.5));
     float diff = clamp(dot(n, L) * 0.5 + 0.5, 0.0, 1.0);
+    float band = step(0.4, diff) * 0.5 + step(0.7, diff) * 0.5;
     float top = step(0.0, vLocal.y);
-    vec3 hi = mix(vec3(0.5, 0.52, 0.64), vec3(0.88, 0.9, 0.97), top);
-    vec3 lo = mix(vec3(0.1, 0.1, 0.17), vec3(0.26, 0.27, 0.37), top);
-    vec3 col = mix(lo, hi, diff);
+    vec3 lo = mix(vec3(0.3, 0.32, 0.52), vec3(0.62, 0.66, 0.9), top);
+    vec3 hi = mix(vec3(0.52, 0.56, 0.78), vec3(0.95, 0.96, 1.0), top);
+    vec3 col = mix(lo, hi, band);
+    col = mix(col, uAccent, 0.1);
 
-    float ang = atan(vLocal.z, vLocal.x);
-    float r = length(vLocal.xz);
-    // Radial panel seams.
-    float seam = smoothstep(0.455, 0.5, abs(fract(ang * 16.0 / TAU) - 0.5));
-    col *= 1.0 - seam * 0.35;
-    // Concentric grooves on top.
-    float groove = smoothstep(0.004, 0.0, abs(r - 0.062)) + smoothstep(0.004, 0.0, abs(r - 0.098));
-    col *= 1.0 - groove * 0.4 * top;
-    // Portholes around the upper slope.
-    float cell = fract(ang * 10.0 / TAU) - 0.5;
-    float arc = cell * TAU * r / 10.0;
-    float hole = smoothstep(0.012, 0.007, length(vec2(arc, r - 0.122))) * top;
-    float blink = 0.75 + 0.25 * sin(uTime * 3.0 + floor(ang * 10.0 / TAU) * 1.7);
-    // Damaged portholes short out at random.
-    float fault = step(0.6, fract(sin(floor(uTime * 11.0) * 12.9 + floor(ang * 10.0 / TAU) * 78.2) * 43758.5));
-    blink *= 1.0 - fault * uDamage;
-    col = mix(col, uAccent * 1.5 + 0.25, hole * blink);
-
-    col += pow(max(dot(reflect(-L, n), v), 0.0), 30.0) * 0.6 * (0.5 + 0.5 * top);
-    col += pow(1.0 - abs(dot(n, v)), 2.5) * uAccent * 0.4;
-    // Scorch marks spread as damage builds.
-    float burn = smoothstep(0.2, 0.9, sin(vLocal.x * 41.0) * sin(vLocal.z * 37.0) * 0.5 + 0.5 + uDamage * 0.4);
-    col *= 1.0 - burn * uDamage * 0.55;
+    // A hard white sticker highlight.
+    float spec = step(0.55, pow(max(dot(reflect(-L, n), v), 0.0), 12.0));
+    col = mix(col, vec3(1.0), spec * 0.75 * top);
+    // Soot blotches spread as damage builds.
+    float burn = step(0.62, sin(vLocal.x * 41.0) * sin(vLocal.z * 37.0) * 0.5 + 0.5 + uDamage * 0.4);
+    col = mix(col, vec3(0.16, 0.13, 0.16), burn * min(1.0, uDamage * 1.4));
     col = mix(col, vec3(1.0, 0.97, 0.92), uHit * 0.85);
     gl_FragColor = vec4(col, uOpacity);
   }
 `;
 
-// Unlit glowing parts (equator band, emitter ring, antenna tip).
+// Unlit flat parts (equator band, emitter ring).
 const glowFragment = /* glsl */ `
   uniform vec3 uAccent;
   uniform float uOpacity;
@@ -90,8 +74,7 @@ const glowFragment = /* glsl */ `
   varying vec3 vView;
   varying vec3 vLocal;
   void main() {
-    float f = pow(1.0 - abs(dot(normalize(vNormal), normalize(vView))), 1.5);
-    vec3 col = mix(uAccent * 1.3, vec3(1.0), 0.25 + f * 0.3) * uPulse;
+    vec3 col = mix(uAccent * 1.15, vec3(1.0), 0.2) * uPulse;
     gl_FragColor = vec4(col, uOpacity);
   }
 `;
@@ -104,15 +87,29 @@ const metalFragment = /* glsl */ `
   varying vec3 vLocal;
   void main() {
     vec3 n = normalize(vNormal);
-    vec3 v = normalize(vView);
     vec3 L = normalize(vec3(0.4, 0.9, 0.5));
     float diff = clamp(dot(n, L) * 0.5 + 0.5, 0.0, 1.0);
-    vec3 col = mix(vec3(0.14, 0.15, 0.22), uTint, diff);
-    col += pow(max(dot(reflect(-L, n), v), 0.0), 24.0) * 0.5;
+    vec3 col = mix(vec3(0.3, 0.32, 0.5), uTint, step(0.5, diff));
     gl_FragColor = vec4(col, uOpacity);
   }
 `;
 
+// Outline: the hull's back faces pushed outwards along the normal, in flat ink.
+const outlineVertex = /* glsl */ `
+  uniform float uWidth;
+  void main() {
+    vec3 p = position + normalize(normal) * uWidth;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+  }
+`;
+const outlineFragment = /* glsl */ `
+  uniform float uOpacity;
+  void main() {
+    gl_FragColor = vec4(0.06, 0.07, 0.17, uOpacity);
+  }
+`;
+
+// Glass: a pale tint, an ink edge and two hard highlights.
 const domeFragment = /* glsl */ `
   uniform vec3 uAccent;
   uniform float uOpacity;
@@ -122,16 +119,19 @@ const domeFragment = /* glsl */ `
   void main() {
     vec3 n = normalize(vNormal);
     vec3 v = normalize(vView);
-    vec3 L = normalize(vec3(0.4, 0.9, 0.5));
-    float f = pow(1.0 - abs(dot(n, v)), 2.0);
-    vec3 col = mix(uAccent * 0.3 + vec3(0.3, 0.38, 0.5), vec3(0.92, 0.98, 1.0), f);
-    col += pow(max(dot(reflect(-L, n), v), 0.0), 50.0) * 1.2;
-    gl_FragColor = vec4(col, (0.38 + 0.55 * f) * uOpacity);
+    float f = 1.0 - abs(dot(n, v));
+    float edge = smoothstep(0.74, 0.8, f);
+    float h = step(0.93, dot(n, normalize(vec3(-0.35, 0.6, 0.7))));
+    float h2 = step(0.985, dot(n, normalize(vec3(0.5, 0.35, 0.8))));
+    vec3 glass = mix(vec3(0.82, 0.94, 1.0), uAccent, 0.15);
+    vec3 col = mix(glass, vec3(0.06, 0.07, 0.17), edge);
+    col = mix(col, vec3(1.0), max(h, h2));
+    float alpha = mix(0.3, 0.95, max(edge, max(h, h2)));
+    gl_FragColor = vec4(col, alpha * uOpacity);
   }
 `;
 
-// Point sprites: rim lights (uTrail 0) chase around the band; trail particles
-// (uTrail 1) are laid out along the orbit behind the ship, hot at the ship,
+// Point sprites: trail particles are laid out along the orbit behind the ship, hot at the ship,
 // cooling to the provider colour and breaking up toward the tail.
 const sparkVertex = /* glsl */ `
   attribute float aK;
@@ -152,19 +152,19 @@ const sparkVertex = /* glsl */ `
     if (uTrail > 0.5) {
       float a = uAngle - (0.11 + aK * uSpan);
       p = vec3(cos(a) * uRadius, 0.0, sin(a) * uRadius * uZ);
-      float j = aK * aK * 0.05;
+      float j = aK * aK * 0.03;
       p += vec3(
         sin(uTime * 13.0 + aSeed * 40.0),
         cos(uTime * 11.0 + aSeed * 23.0),
         sin(uTime * 9.0 + aSeed * 31.0)
       ) * j;
       float flicker = 0.7 + 0.3 * sin(uTime * 31.0 + aSeed * 57.0);
-      size = (0.11 * (1.0 - aK) + 0.024) * flicker;
+      size = (0.07 * (1.0 - aK) + 0.02) * flicker;
       vBright = flicker;
     } else {
       float chase = fract(uTime * 0.9 - aK);
       vBright = 0.35 + 0.65 * smoothstep(0.7, 1.0, chase);
-      size = 0.042 * (0.7 + 0.5 * vBright);
+      size = 0.058 * (0.7 + 0.4 * vBright);
     }
     vK = aK;
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
@@ -181,12 +181,12 @@ const sparkFragment = /* glsl */ `
   varying float vBright;
   void main() {
     float d = length(gl_PointCoord - 0.5);
-    float a = pow(smoothstep(0.5, 0.0, d), 1.6);
+    float a = smoothstep(0.5, 0.36, d);
     vec3 col;
     float alpha;
     if (uTrail > 0.5) {
       col = mix(vec3(1.0, 0.96, 0.86), uColor, smoothstep(0.0, 0.4, vK));
-      alpha = a * pow(1.0 - vK, 1.3) * vBright * 0.9;
+      alpha = a * pow(1.0 - vK, 1.6) * vBright * 0.45;
     } else {
       col = mix(uColor, vec3(1.0), vBright * 0.6);
       alpha = a * vBright;
@@ -225,31 +225,33 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
 
   const hullMat = lit(hullFragment, { uTime: { value: 0 }, uDamage: { value: 0 }, uHit: { value: 0 } });
   const profile = [
-    [0.0, -0.036],
-    [0.04, -0.04],
-    [0.085, -0.033],
-    [0.125, -0.016],
-    [HULL_R, 0.0],
-    [0.13, 0.012],
-    [0.1, 0.022],
-    [0.06, 0.03],
-    [0.0, 0.032],
+    [0.0, -0.05],
+    [0.05, -0.054],
+    [0.1, -0.044],
+    [0.14, -0.02],
+    [HULL_R, 0.004],
+    [0.14, 0.02],
+    [0.105, 0.034],
+    [0.06, 0.044],
+    [0.0, 0.047],
   ].map(([x, y]) => new THREE.Vector2(x, y));
   const hull = new THREE.Mesh(new THREE.LatheGeometry(profile, 48), hullMat);
   spinner.add(hull);
+  const outlineMat = new THREE.ShaderMaterial({
+    uniforms: { uWidth: { value: 0.006 }, uOpacity: { value: 1 } },
+    vertexShader: outlineVertex,
+    fragmentShader: outlineFragment,
+    side: THREE.BackSide,
+    transparent: true,
+  });
+  const outline = new THREE.Mesh(hull.geometry, outlineMat);
+  spinner.add(outline);
 
   // Glowing equator band and the chasing lights on it.
   const bandMat = lit(glowFragment, { uPulse: { value: 1 } });
-  const band = new THREE.Mesh(new THREE.TorusGeometry(HULL_R - 0.002, 0.009, 8, 64).rotateX(Math.PI / 2), bandMat);
+  const band = new THREE.Mesh(new THREE.TorusGeometry(HULL_R - 0.002, 0.013, 10, 64).rotateX(Math.PI / 2), bandMat);
   spinner.add(band);
 
-  const rimPos = new Float32Array(RIM_LIGHTS * 3);
-  const rimK = new Float32Array(RIM_LIGHTS);
-  for (let i = 0; i < RIM_LIGHTS; i++) {
-    const a = (i / RIM_LIGHTS) * Math.PI * 2;
-    rimPos.set([Math.cos(a) * (HULL_R + 0.006), 0, Math.sin(a) * (HULL_R + 0.006)], i * 3);
-    rimK[i] = i / RIM_LIGHTS;
-  }
   const sparkUniforms = () => ({
     uTime: { value: 0 },
     uScale: { value: 1 },
@@ -257,7 +259,7 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
     uAngle: { value: 0 },
     uRadius: { value: 1 },
     uZ: { value: 1 },
-    uSpan: { value: 0.62 },
+    uSpan: { value: 0.4 },
     uTrail: { value: 0 },
     uColor: { value: accent },
     uOpacity: { value: 1 },
@@ -272,50 +274,28 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     });
-  const rimMat = sparkMaterial(false);
-  const rimGeo = new THREE.BufferGeometry();
-  rimGeo.setAttribute("position", new THREE.BufferAttribute(rimPos, 3));
-  rimGeo.setAttribute("aK", new THREE.BufferAttribute(rimK, 1));
-  rimGeo.setAttribute("aSeed", new THREE.BufferAttribute(new Float32Array(RIM_LIGHTS), 1));
-  const rim = new THREE.Points(rimGeo, rimMat);
-  rim.frustumCulled = false;
-  spinner.add(rim);
-
   // Tractor emitter ring underneath, pulsing.
   const emitterMat = lit(glowFragment, { uPulse: { value: 1 } });
-  const emitter = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.007, 8, 40).rotateX(Math.PI / 2), emitterMat);
-  emitter.position.y = -0.038;
+  const emitter = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.01, 10, 40).rotateX(Math.PI / 2), emitterMat);
+  emitter.position.y = -0.054;
   craft.add(emitter);
 
-  // Dome: metal collar, the glass, and an antenna with a blinking tip.
+  // Dome: a metal collar and the glass.
   const metalMat = new THREE.ShaderMaterial({
-    uniforms: { uOpacity: { value: 1 }, uTint: { value: new THREE.Color("#c9cde0") } },
+    uniforms: { uOpacity: { value: 1 }, uTint: { value: new THREE.Color("#dfe3f5") } },
     vertexShader: litVertex,
     fragmentShader: metalFragment,
     transparent: true,
   });
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.007, 8, 40).rotateX(Math.PI / 2), metalMat);
-  collar.position.y = 0.03;
+  const DOME_Y = 0.044;
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.066, 0.01, 10, 40).rotateX(Math.PI / 2), metalMat);
+  collar.position.y = DOME_Y;
   craft.add(collar);
 
   const domeMat = lit(domeFragment);
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.056, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
-  dome.position.y = 0.03;
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.064, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
+  dome.position.y = DOME_Y;
   craft.add(dome);
-
-  const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.0025, 0.0035, 0.036, 6), metalMat);
-  antenna.position.y = 0.1;
-  craft.add(antenna);
-  const tipMat = new THREE.SpriteMaterial({
-    map: glow,
-    color,
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-  });
-  const tip = new THREE.Sprite(tipMat);
-  tip.position.y = 0.12;
-  craft.add(tip);
 
   // Soft light spilling from underneath, in the provider colour.
   const underMat = new THREE.SpriteMaterial({
@@ -326,7 +306,7 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
     blending: THREE.AdditiveBlending,
   });
   const under = new THREE.Sprite(underMat);
-  under.position.y = -0.05;
+  under.position.y = -0.07;
   under.scale.setScalar(0.36);
   craft.add(under);
 
@@ -351,8 +331,9 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
 
   // Everything draws after the cloud (which writes no depth) and fades via
   // opacity while behind it. Glass and glows last, so solid parts show through.
-  for (const o of [hull, band, collar, antenna, emitter]) o.renderOrder = 5;
-  for (const o of [dome, rim, tip, under, trail]) o.renderOrder = 6;
+  outline.renderOrder = 4;
+  for (const o of [hull, band, collar, emitter]) o.renderOrder = 5;
+  for (const o of [dome, under, trail]) o.renderOrder = 6;
 
   // ---- Explosion: a flash and a spray of debris where the saucer died -------
   const boomMat = new THREE.SpriteMaterial({
@@ -385,9 +366,9 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
   ship.add(debris);
   const debrisVel = Array.from({ length: DEBRIS }, () => new THREE.Vector3());
 
-  const shaders = [hullMat, bandMat, emitterMat, metalMat, domeMat];
-  const sparks = [rimMat, trailMat];
-  const sprites = [tipMat, underMat, boomMat, debrisMat];
+  const shaders = [hullMat, outlineMat, bandMat, emitterMat, metalMat, domeMat];
+  const sparks = [trailMat];
+  const sprites = [underMat, boomMat, debrisMat];
   let scale = 1;
 
   // ---- Health ----------------------------------------------------------------
@@ -523,13 +504,7 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
     craft.scale.setScalar(dying === -1 ? 0.2 + 0.8 * visibility : 1);
     trail.visible = trailFade > 0.01;
     const opacity = f.opacity * visibility;
-    // Antenna tip: a quick double blink each second or so.
-    const beat = (time * 0.9 + phase) % 1;
-    const blink = beat < 0.08 || (beat > 0.16 && beat < 0.24) ? 1 : 0.15;
-    tip.scale.setScalar(0.07 + 0.05 * blink);
-
     for (const m of shaders) m.uniforms.uOpacity.value = opacity;
-    tipMat.opacity = opacity * blink;
     underMat.opacity = opacity * (0.5 + 0.2 * Math.sin(time * 4 + phase));
 
     for (const m of sparks) {

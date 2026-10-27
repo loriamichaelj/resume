@@ -35,10 +35,10 @@ export function glowTexture(): THREE.CanvasTexture {
 
 // Brand palette shared by every layer of the scene.
 export const PALETTE = {
-  aqua: "#38d9ff",
-  violet: "#7b61ff",
-  rose: "#ff5fa2",
-  peach: "#ffb36b",
-  flame: "#ff7849",
-  white: "#f4f1ff",
+  aqua: "#ffffff",
+  violet: "#4d7cff",
+  rose: "#cfe0ff",
+  peach: "#eaf1ff",
+  flame: "#ffffff",
+  white: "#ffffff",
 };

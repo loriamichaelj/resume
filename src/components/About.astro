@@ -45,11 +45,11 @@ const stats = [
             <div class="reveal" data-reveal="flip" data-delay={`${160 + i * 120}`}>
               <div class="card-surface h-full overflow-hidden p-6" data-tilt="10">
                 <dt class="whitespace-nowrap font-display text-xl font-bold sm:text-2xl">
-                  <span class="text-gradient">{s.value}</span>
+                  <span class="text-accent">{s.value}</span>
                 </dt>
                 <dd class="mt-2 whitespace-nowrap text-xs text-white/55 sm:text-sm">{s.label}</dd>
                 <span
-                  class="pointer-events-none absolute -bottom-10 -right-10 h-28 w-28 rounded-full bg-brand-gradient opacity-25 blur-2xl"
+                  class="pointer-events-none absolute -bottom-10 -right-10 h-28 w-28 rounded-full bg-aqua opacity-15 blur-2xl"
                   aria-hidden="true"
                 />
               </div>
@@ -59,25 +59,16 @@ const stats = [
       </dl>
 
       <div class="reveal mt-8" data-delay="320">
-        <svg class="absolute h-0 w-0" aria-hidden="true">
-          <defs>
-            <linearGradient id="cert-grad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" style="stop-color: rgb(var(--c-aqua))" />
-              <stop offset="0.5" style="stop-color: rgb(var(--c-violet))" />
-              <stop offset="1" style="stop-color: rgb(var(--c-rose))" />
-            </linearGradient>
-          </defs>
-        </svg>
         <p class="eyebrow mb-3">Certifications</p>
         <ul class="flex flex-col gap-3">
           {
             certifications.map((c) => (
               <li class="card-surface group flex items-center gap-4 px-5 py-4">
                 <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl icon-glass transition-transform duration-500 group-hover:rotate-6 group-hover:scale-110">
-                  <Icon name="badge-check" class="h-5 w-5 [stroke:url(#cert-grad)]" />
+                  <Icon name="badge-check" class="h-5 w-5 [stroke:rgb(var(--c-aqua))]" />
                 </span>
                 <span class="font-mono text-sm font-medium">
-                  <span class="text-gradient">{c.code}</span>
+                  <span class="text-accent">{c.code}</span>
                 </span>
                 <span class="text-sm text-white/80">{c.name}</span>
                 <span class="ml-auto hidden text-xs text-white/45 sm:inline">{c.status}</span>

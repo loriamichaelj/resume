@@ -4,17 +4,11 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Registered so they can be transitioned / animated (cursor spotlight and the
-   rotating gradient border). Browsers without @property just snap. */
+/* Registered so they can be transitioned / animated (cursor spotlight). Browsers without @property just snap. */
 @property --spot {
   syntax: "<number>";
   inherits: true;
   initial-value: 0;
-}
-@property --border-angle {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 0deg;
 }
 
 @layer base {
@@ -23,48 +17,37 @@
      RGB channels so Tailwind's rgb(var(--x) / <alpha-value>) can apply opacity. */
   :root {
     color-scheme: dark;
-    --c-fg: 255 255 255; /* foreground / text  -> Tailwind `white` */
-    --c-ink-950: 3 3 11; /* page background    -> Tailwind `ink-950` */
-    --c-ink-900: 9 8 23; /* elevated card bg  -> Tailwind `ink-900` */
+    --c-fg: 160 182 222; /* foreground / text  -> Tailwind `white` (soft blue) */
+    --c-ink-950: 2 5 13; /* page background    -> Tailwind `ink-950` */
+    --c-ink-900: 7 12 26; /* elevated card bg  -> Tailwind `ink-900` */
     --c-edge: 255 255 255; /* hairline / card-border highlight */
-    --c-orb-1: 123 97 255; /* fallback backdrop orbs (no WebGL) */
-    --c-orb-2: 255 95 162;
-    --c-orb-3: 56 217 255;
-    --c-spot: 160 140 255; /* cursor spotlight on cards */
+    --c-orb-1: 255 255 255; /* fallback backdrop glow (no WebGL) */
+    --c-spot: 255 255 255; /* cursor spotlight on cards */
     /* Brand colour slots -> Tailwind aqua / violet / rose / peach / flame. */
-    --c-aqua: 56 217 255;
-    --c-violet: 123 97 255;
-    --c-rose: 255 95 162;
-    --c-peach: 255 179 107;
-    --c-flame: 255 120 73;
-    --c-dot: 217 119 6; /* hero status dot: amber on dark... */
-    --brand-gradient: linear-gradient(
-      110deg,
-      rgb(var(--c-aqua)) 0%,
-      rgb(var(--c-violet)) 34%,
-      rgb(var(--c-rose)) 68%,
-      rgb(var(--c-peach)) 100%
-    );
+    --c-aqua: 255 255 255; /* white: the neon accent */
+    --c-violet: 77 124 255; /* electric blue */
+    --c-rose: 125 211 252; /* ice blue */
+    --c-peach: 255 240 120; /* neon yellow */
+    --c-flame: 190 255 60; /* neon lime */
+    --c-dot: 2 5 13; /* hero status dot: the page background */
     --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  /* Light: a warm, sunlit orange scheme. */
+  /* Light: warm paper, graphite text, orange accent. */
   :root.light {
     color-scheme: light;
-    --c-fg: 67 32 12; /* deep warm brown body text */
-    --c-ink-950: 255 247 237; /* warm cream page */
+    --c-fg: 28 25 23; /* graphite body text */
+    --c-ink-950: 250 249 245; /* warm paper page */
     --c-ink-900: 255 255 255; /* white cards, elevated above the page */
-    --c-edge: 124 45 18; /* warm hairlines on light surfaces */
-    --c-orb-1: 251 146 60;
-    --c-orb-2: 244 63 94;
-    --c-orb-3: 253 186 116;
+    --c-edge: 28 25 23; /* hairlines on light surfaces */
+    --c-orb-1: 249 115 22;
     --c-spot: 249 115 22;
-    --c-aqua: 217 119 6; /* amber */
-    --c-violet: 249 115 22; /* orange */
-    --c-rose: 234 88 12; /* deep orange */
-    --c-peach: 225 29 72; /* rose */
-    --c-flame: 220 38 38; /* red-orange */
-    --c-dot: 56 217 255; /* ...and aqua on light */
+    --c-aqua: 234 88 12; /* orange: the accent */
+    --c-violet: 87 83 78; /* warm grey */
+    --c-rose: 249 115 22; /* orange, a step lighter */
+    --c-peach: 251 146 60; /* soft orange */
+    --c-flame: 194 65 12; /* deep orange */
+    --c-dot: 234 88 12; /* hero status dot */
   }
 
   html {
@@ -88,7 +71,7 @@
     overflow-x: clip;
   }
 
-  /* Fallback gradient backdrop, shown until (or instead of) the WebGL scene.
+  /* Fallback backdrop glow, shown until (or instead of) the WebGL scene.
      A pseudo-element instead of background-attachment: fixed, which is janky
      on mobile (esp. iOS). */
   body::before {
@@ -97,10 +80,7 @@
     inset: 0;
     z-index: -3;
     pointer-events: none;
-    background-image:
-      radial-gradient(60rem 40rem at 80% -10%, rgb(var(--c-orb-1) / 0.22), transparent 60%),
-      radial-gradient(50rem 35rem at 0% 15%, rgb(var(--c-orb-2) / 0.14), transparent 55%),
-      radial-gradient(45rem 30rem at 50% 110%, rgb(var(--c-orb-3) / 0.12), transparent 60%);
+    background-image: radial-gradient(60rem 40rem at 80% -10%, rgb(var(--c-orb-1) / 0.1), transparent 60%);
     transition: opacity 1.2s ease;
   }
   /* The scene's aurora takes over, except under reduced motion, where the
@@ -110,7 +90,7 @@
   }
 
   ::selection {
-    background: rgb(var(--c-rose) / 0.35);
+    background: rgb(var(--c-aqua) / 0.3);
     color: rgb(var(--c-fg));
   }
 }
@@ -124,12 +104,8 @@
     @apply font-mono text-xs uppercase tracking-[0.25em] text-white/50;
   }
 
-  .text-gradient {
-    background-image: var(--brand-gradient);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+  .text-accent {
+    color: rgb(var(--c-aqua));
   }
 
   /* Theme toggle: show the icon for the mode you'll switch TO. */
@@ -237,7 +213,7 @@
   }
 
   /* ---------------------------------------------------------------------------
-     Cards with a gradient hairline and a cursor-following spotlight.
+     Cards with a hairline and a cursor-following spotlight.
      --mx / --my / --spot are set by src/scripts/motion.ts. No backdrop blur:
      re-blurring the animated canvas behind every card each frame is what makes
      scrolling stutter. .card-clear drops the fill entirely.
@@ -251,7 +227,7 @@
   }
   :root.light .card-surface {
     background: rgb(var(--c-ink-900) / 0.5);
-    box-shadow: 0 20px 50px -30px rgb(80 60 200 / 0.35);
+    box-shadow: 0 20px 50px -30px rgb(28 25 23 / 0.18);
   }
   /* Fully transparent: just the hairline outline (and spotlight) remain. */
   .card-clear,
@@ -261,7 +237,7 @@
   }
   /* Frosted glass, for a single feature card (the blur is fine on one). */
   .card-glass {
-    background: linear-gradient(135deg, rgb(255 255 255 / 0.09), rgb(255 255 255 / 0.02));
+    background: rgb(255 255 255 / 0.055);
     -webkit-backdrop-filter: blur(18px) saturate(150%);
     backdrop-filter: blur(18px) saturate(150%);
     box-shadow:
@@ -269,14 +245,14 @@
       0 24px 60px -30px rgb(0 0 0 / 0.6);
   }
   :root.light .card-glass {
-    background: linear-gradient(135deg, rgb(255 255 255 / 0.55), rgb(255 255 255 / 0.22));
+    background: rgb(255 255 255 / 0.385);
     box-shadow:
       inset 0 1px 0 rgb(255 255 255 / 0.75),
-      0 24px 60px -30px rgb(124 45 18 / 0.35);
+      0 24px 60px -30px rgb(28 25 23 / 0.35);
   }
   /* A sheerer glass: less fill, less blur, no extra saturation (hero card). */
   .card-glass.card-glass-sheer {
-    background: linear-gradient(135deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0));
+    background: rgb(255 255 255 / 0.02);
     -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
     box-shadow:
@@ -284,14 +260,14 @@
       0 24px 60px -30px rgb(0 0 0 / 0.4);
   }
   :root.light .card-glass.card-glass-sheer {
-    background: linear-gradient(135deg, rgb(255 255 255 / 0.3), rgb(255 255 255 / 0.1));
+    background: rgb(255 255 255 / 0.2);
     box-shadow:
       inset 0 1px 0 rgb(255 255 255 / 0.6),
-      0 24px 60px -30px rgb(124 45 18 / 0.25);
+      0 24px 60px -30px rgb(28 25 23 / 0.25);
   }
   /* Nearly clear glass: a faint tint and a light blur (contact card). */
   .card-glass.card-glass-clear {
-    background: linear-gradient(135deg, rgb(255 255 255 / 0.02), rgb(255 255 255 / 0));
+    background: rgb(255 255 255 / 0.01);
     -webkit-backdrop-filter: blur(3px);
     backdrop-filter: blur(3px);
     box-shadow:
@@ -299,10 +275,10 @@
       0 24px 60px -30px rgb(0 0 0 / 0.3);
   }
   :root.light .card-glass.card-glass-clear {
-    background: linear-gradient(135deg, rgb(255 255 255 / 0.15), rgb(255 255 255 / 0.04));
+    background: rgb(255 255 255 / 0.095);
     box-shadow:
       inset 0 1px 0 rgb(255 255 255 / 0.5),
-      0 24px 60px -30px rgb(124 45 18 / 0.18);
+      0 24px 60px -30px rgb(28 25 23 / 0.18);
   }
   .card-surface::before {
     content: "";
@@ -316,12 +292,7 @@
         rgb(var(--c-spot) / calc(0.85 * var(--spot))),
         transparent 45%
       ),
-      linear-gradient(
-        150deg,
-        rgb(var(--c-edge) / 0.16),
-        rgb(var(--c-edge) / 0.03) 40%,
-        rgb(var(--c-violet) / 0.25)
-      );
+      rgb(var(--c-edge) / 0.12);
     -webkit-mask:
       linear-gradient(#000 0 0) content-box,
       linear-gradient(#000 0 0);
@@ -417,14 +388,9 @@
     animation: char-in 1.2s var(--ease-out) forwards;
     animation-delay: calc(var(--i) * 45ms + 150ms);
   }
-  /* One continuous gradient across a split word: each letter shows its slice. */
+  /* The accent word, split into letters for the entrance animation. */
   .hero-char-gradient {
-    background-image: var(--brand-gradient);
-    background-size: calc(var(--n) * 100%) 100%;
-    background-position: calc(var(--j) / max(var(--n) - 1, 1) * 100%) 0;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: rgb(var(--c-aqua));
   }
   @keyframes char-in {
     to {
@@ -471,29 +437,19 @@
     transform-origin: 50% 0%;
   }
 
-  /* Primary button with a rotating conic gradient border. */
+  /* Primary button: solid accent outline with a soft glow. */
   .btn-glow {
     @apply relative inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-sm font-semibold text-white;
-    background:
-      linear-gradient(rgb(var(--c-ink-950)), rgb(var(--c-ink-950))) padding-box,
-      conic-gradient(
-          from var(--border-angle),
-          rgb(var(--c-aqua)),
-          rgb(var(--c-violet)),
-          rgb(var(--c-rose)),
-          rgb(var(--c-peach)),
-          rgb(var(--c-aqua))
-        )
-        border-box;
-    border: 1.5px solid transparent;
-    animation: spin-border 5s linear infinite;
-    box-shadow: 0 0 40px -10px rgb(var(--c-violet) / 0.7);
-    transition: box-shadow 0.4s ease;
+    background: rgb(var(--c-ink-950));
+    border: 1.5px solid rgb(var(--c-aqua) / 0.7);
+    box-shadow: 0 0 36px -12px rgb(var(--c-aqua) / 0.55);
+    transition:
+      box-shadow 0.4s ease,
+      border-color 0.3s ease;
   }
   .btn-glow:hover {
-    box-shadow:
-      0 0 60px -8px rgb(var(--c-rose) / 0.75),
-      0 0 30px -10px rgb(var(--c-aqua) / 0.8);
+    border-color: rgb(var(--c-aqua));
+    box-shadow: 0 0 48px -10px rgb(var(--c-aqua) / 0.7);
   }
   .btn-ghost {
     @apply inline-flex items-center gap-2 rounded-full border border-white/15 bg-ink-950/40 px-7 py-3.5 text-sm font-medium text-white/85 transition-colors hover:border-white/40 hover:text-white;
@@ -504,9 +460,7 @@
   /* Frosted-glass tile behind an icon: a faint brand tint, a bright top edge
      and a blur of whatever is behind it. Small, so the blur stays cheap. */
   .icon-glass {
-    background:
-      linear-gradient(135deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0.03)),
-      linear-gradient(135deg, rgb(var(--c-violet) / 0.18), rgb(var(--c-aqua) / 0.06));
+    background: rgb(255 255 255 / 0.08);
     border: 1px solid rgb(255 255 255 / 0.14);
     -webkit-backdrop-filter: blur(10px) saturate(160%);
     backdrop-filter: blur(10px) saturate(160%);
@@ -523,13 +477,11 @@
     border-color: rgb(255 255 255 / 0.32);
   }
   :root.light .icon-glass {
-    background:
-      linear-gradient(135deg, rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.28)),
-      linear-gradient(135deg, rgb(var(--c-violet) / 0.14), rgb(var(--c-aqua) / 0.05));
+    background: rgb(255 255 255 / 0.55);
     border-color: rgb(255 255 255 / 0.8);
     box-shadow:
       inset 0 1px 0 rgb(255 255 255 / 0.95),
-      0 8px 24px -12px rgb(124 45 18 / 0.4);
+      0 8px 24px -12px rgb(28 25 23 / 0.4);
   }
   [data-magnetic] {
     transition:
@@ -549,13 +501,7 @@
   }
   .timeline-fill {
     @apply absolute inset-0 origin-top;
-    background-image: linear-gradient(
-      180deg,
-      rgb(var(--c-aqua)),
-      rgb(var(--c-violet)) 40%,
-      rgb(var(--c-rose)) 75%,
-      rgb(var(--c-peach))
-    );
+    background-color: rgb(var(--c-aqua));
     transform: scaleY(var(--p, 0));
   }
   .timeline-dot {
@@ -572,11 +518,11 @@
       transform 0.5s var(--ease-out);
   }
   .timeline-item.is-active .timeline-dot {
-    border-color: rgb(var(--c-rose) / 0.6);
-    box-shadow: 0 0 22px rgb(var(--c-rose) / 0.55);
+    border-color: rgb(var(--c-aqua) / 0.6);
+    box-shadow: 0 0 22px rgb(var(--c-aqua) / 0.45);
   }
   .timeline-item.is-active .timeline-dot::after {
-    background: var(--brand-gradient);
+    background: rgb(var(--c-aqua));
     transform: scale(1.35);
   }
 
@@ -674,7 +620,7 @@
   :root.light .term-card {
     background: rgb(var(--c-ink-900) / 0.95);
     box-shadow:
-      0 24px 60px -24px rgb(124 45 18 / 0.35),
+      0 24px 60px -24px rgb(28 25 23 / 0.35),
       0 0 0 1px rgb(var(--c-violet) / 0.15);
   }
   .term-card-close {
@@ -721,31 +667,31 @@
   }
   :root[data-quality="low"] .card-glass {
     background:
-      linear-gradient(135deg, rgb(255 255 255 / 0.09), rgb(255 255 255 / 0.03)),
+      rgb(255 255 255 / 0.06),
       rgb(var(--c-ink-950) / 0.4);
   }
   :root[data-quality="low"].light .card-glass {
-    background: linear-gradient(135deg, rgb(255 255 255 / 0.75), rgb(255 255 255 / 0.5));
+    background: rgb(255 255 255 / 0.625);
   }
   :root[data-quality="low"] .card-glass.card-glass-sheer {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background:
-      linear-gradient(135deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.01)),
+      rgb(255 255 255 / 0.03),
       rgb(var(--c-ink-950) / 0.18);
   }
   :root[data-quality="low"].light .card-glass.card-glass-sheer {
-    background: linear-gradient(135deg, rgb(255 255 255 / 0.5), rgb(255 255 255 / 0.3));
+    background: rgb(255 255 255 / 0.4);
   }
   :root[data-quality="low"] .card-glass.card-glass-clear {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background:
-      linear-gradient(135deg, rgb(255 255 255 / 0.03), rgb(255 255 255 / 0)),
+      rgb(255 255 255 / 0.015),
       rgb(var(--c-ink-950) / 0.1);
   }
   :root[data-quality="low"].light .card-glass.card-glass-clear {
-    background: linear-gradient(135deg, rgb(255 255 255 / 0.3), rgb(255 255 255 / 0.15));
+    background: rgb(255 255 255 / 0.225);
   }
   :root[data-quality="low"] .is-scrolled .nav-shell {
     background: rgb(var(--c-ink-950) / 0.85);
@@ -811,9 +757,7 @@
     position: absolute;
     inset: 0;
     touch-action: none;
-    background:
-      radial-gradient(60rem 40rem at 50% 40%, rgb(var(--c-violet) / 0.14), transparent 70%),
-      rgb(var(--c-ink-950) / 0.7);
+    background: rgb(var(--c-ink-950) / 0.7);
   }
   .skill-panel {
     position: relative;
@@ -825,7 +769,7 @@
     overflow: hidden;
     border-radius: 24px;
     padding: 1.25rem;
-    background: linear-gradient(145deg, rgb(var(--c-ink-900) / 0.96), rgb(var(--c-ink-950) / 0.92));
+    background: rgb(var(--c-ink-900) / 0.96);
     border: 1px solid rgb(var(--c-edge) / 0.14);
     box-shadow:
       inset 0 1px 0 rgb(255 255 255 / 0.12),
@@ -845,7 +789,7 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: radial-gradient(520px circle at var(--mx, 50%) var(--my, 0%), rgb(var(--c-violet) / 0.16), transparent 60%);
+    background: radial-gradient(520px circle at var(--mx, 50%) var(--my, 0%), rgb(var(--c-spot) / 0.12), transparent 60%);
   }
   /* One bright sweep across the glass as it opens. */
   .skill-panel::after {
@@ -940,9 +884,93 @@
     .rotator-word:not(:first-child) {
       display: none;
     }
-    .text-gradient,
-    .btn-glow {
-      animation: none;
-    }
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   Neon (dark theme only): white glows on the accent, never gradients. Everything
+   keys off --c-aqua / --c-violet so the light theme is untouched.
+   -------------------------------------------------------------------------- */
+@layer components {
+  :root:not(.light) .text-accent,
+  :root:not(.light) .hero-char-gradient {
+    text-shadow:
+      0 0 10px rgb(var(--c-aqua) / 0.6),
+      0 0 28px rgb(var(--c-aqua) / 0.35);
+  }
+  :root:not(.light) .eyebrow {
+    color: rgb(var(--c-aqua) / 0.75);
+    text-shadow: 0 0 8px rgb(var(--c-aqua) / 0.4);
+  }
+  :root:not(.light) .bg-aqua {
+    box-shadow: 0 0 10px rgb(var(--c-aqua) / 0.8);
+  }
+
+  /* Cards: a white hairline that lights up under the cursor (--spot). */
+  :root:not(.light) .card-surface::before {
+    background:
+      radial-gradient(
+        22rem circle at var(--mx) var(--my),
+        rgb(var(--c-spot) / calc(0.9 * var(--spot))),
+        transparent 45%
+      ),
+      rgb(var(--c-aqua) / 0.2);
+  }
+  :root:not(.light) .card-surface:not(.card-glass) {
+    box-shadow: 0 0 calc(34px * var(--spot)) -10px rgb(var(--c-aqua) / calc(0.55 * var(--spot)));
+  }
+
+  :root:not(.light) .btn-glow {
+    color: rgb(var(--c-aqua));
+    border-color: rgb(var(--c-aqua));
+    text-shadow: 0 0 8px rgb(var(--c-aqua) / 0.7);
+    box-shadow:
+      0 0 16px -2px rgb(var(--c-aqua) / 0.6),
+      0 0 44px -8px rgb(var(--c-aqua) / 0.45),
+      inset 0 0 14px -6px rgb(var(--c-aqua) / 0.5);
+  }
+  :root:not(.light) .btn-glow:hover {
+    box-shadow:
+      0 0 22px 0 rgb(var(--c-aqua) / 0.8),
+      0 0 64px -6px rgb(var(--c-aqua) / 0.6),
+      inset 0 0 18px -6px rgb(var(--c-aqua) / 0.7);
+  }
+  :root:not(.light) .btn-ghost:hover {
+    border-color: rgb(var(--c-aqua) / 0.6);
+    box-shadow: 0 0 18px -4px rgb(var(--c-aqua) / 0.5);
+  }
+
+  :root:not(.light) .icon-glass {
+    border-color: rgb(var(--c-aqua) / 0.28);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.12),
+      0 0 16px -6px rgb(var(--c-aqua) / 0.5);
+  }
+  :root:not(.light) .icon-glass:hover {
+    border-color: rgb(var(--c-aqua) / 0.7);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.12),
+      0 0 22px -4px rgb(var(--c-aqua) / 0.7);
+  }
+
+  :root:not(.light) button.marquee-pill:hover {
+    border-color: rgb(var(--c-aqua) / 0.6);
+    box-shadow: 0 0 16px -4px rgb(var(--c-aqua) / 0.5);
+  }
+  :root:not(.light) button.marquee-pill[aria-expanded="true"] {
+    border-color: rgb(var(--c-violet) / 0.8);
+    box-shadow: 0 0 20px -4px rgb(var(--c-violet) / 0.7);
+  }
+
+  :root:not(.light) .skill-panel {
+    border-color: rgb(var(--c-aqua) / 0.4);
+    box-shadow:
+      0 0 44px -12px rgb(var(--c-aqua) / 0.5),
+      inset 0 1px 0 rgb(255 255 255 / 0.12);
+  }
+
+  /* The dot is the page colour, so give it a hairline to stay visible. */
+  :root:not(.light) .status-dot {
+    box-shadow: 0 0 0 1px rgb(var(--c-aqua) / 0.5);
   }
 }

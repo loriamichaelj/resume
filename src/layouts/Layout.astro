@@ -21,7 +21,7 @@ const {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="generator" content={Astro.generator} />
-    <meta name="theme-color" content="#03030b" />
+    <meta name="theme-color" content="#02050d" />
 
     <!-- Apply the saved/system theme before first paint to avoid a flash. -->
     <script is:inline>
@@ -80,7 +80,7 @@ const {
     <!-- Scroll progress -->
     <div
       id="scroll-progress"
-      class="pointer-events-none fixed inset-x-0 top-0 z-50 h-[2px] origin-left bg-brand-gradient"
+      class="pointer-events-none fixed inset-x-0 top-0 z-50 h-[2px] origin-left bg-aqua"
       style="transform: scaleX(0)"
       aria-hidden="true"
     >
@@ -90,7 +90,7 @@ const {
     <div
       id="cursor-glow"
       class="pointer-events-none fixed left-0 top-0 -z-[1] h-[34rem] w-[34rem] rounded-full opacity-0 transition-opacity duration-700"
-      style="background: radial-gradient(circle, rgb(var(--c-orb-1) / 0.16), rgb(var(--c-orb-2) / 0.06) 40%, transparent 70%)"
+      style="background: radial-gradient(circle, rgb(var(--c-spot) / 0.12), transparent 70%)"
       aria-hidden="true"
     >
     </div>

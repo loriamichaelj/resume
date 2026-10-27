@@ -12,9 +12,9 @@ export default {
           950: "rgb(var(--c-ink-950) / <alpha-value>)",
           900: "rgb(var(--c-ink-900) / <alpha-value>)",
         },
-        // Brand palette as theme variables (see global.css). Dark: aqua ->
-        // violet -> rose -> peach, flame as a warm accent. Light: the same slots
-        // hold an amber -> orange -> rose sunset.
+        // Brand palette as theme variables (see global.css). Dark is navy
+        // blue with a white neon accent (aqua), electric blue (violet), pink (rose), lime (flame); light is paper with an
+        // orange accent. The slot names are kept so components don't change.
         aqua: "rgb(var(--c-aqua) / <alpha-value>)",
         violet: "rgb(var(--c-violet) / <alpha-value>)",
         rose: "rgb(var(--c-rose) / <alpha-value>)",
@@ -29,21 +29,10 @@ export default {
       maxWidth: {
         content: "1180px",
       },
-      backgroundImage: {
-        // Theme-aware: the light theme swaps in deeper stops for contrast.
-        "brand-gradient": "var(--brand-gradient)",
-      },
       keyframes: {
         float: {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-12px)" },
-        },
-        "gradient-pan": {
-          "0%, 100%": { backgroundPosition: "0% 50%" },
-          "50%": { backgroundPosition: "100% 50%" },
-        },
-        "spin-border": {
-          to: { "--border-angle": "360deg" },
         },
         "ping-soft": {
           "0%": { transform: "scale(1)", opacity: "0.7" },
@@ -52,8 +41,6 @@ export default {
       },
       animation: {
         float: "float 7s ease-in-out infinite",
-        "gradient-pan": "gradient-pan 8s ease infinite",
-        "spin-border": "spin-border 6s linear infinite",
         "ping-soft": "ping-soft 2.2s cubic-bezier(0, 0, 0.2, 1) infinite",
       },
     },

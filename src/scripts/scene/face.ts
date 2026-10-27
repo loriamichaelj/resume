@@ -166,8 +166,8 @@ export function createFace() {
     uBlushing: { value: 0 },
     uOpacity: { value: 0 },
     uTime: { value: 0 },
-    uInk: { value: new THREE.Color("#2a1d5e") },
-    uBlush: { value: new THREE.Color("#ff8fb3") },
+    uInk: { value: new THREE.Color("#0f172a") },
+    uBlush: { value: new THREE.Color("#b8c8ee") },
   };
   const material = new THREE.ShaderMaterial({
     uniforms,
@@ -183,8 +183,8 @@ export function createFace() {
   mesh.frustumCulled = false;
 
   function setTheme(light: boolean) {
-    uniforms.uInk.value.set(light ? "#4a2316" : "#2a1d5e");
-    uniforms.uBlush.value.set(light ? "#ff7a6b" : "#ff8fb3");
+    uniforms.uInk.value.set(light ? "#4a2316" : "#0f172a");
+    uniforms.uBlush.value.set(light ? "#ff7a6b" : "#b8c8ee");
   }
 
   function update(e: Expression) {

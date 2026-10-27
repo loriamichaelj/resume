@@ -186,8 +186,8 @@ export function createLightning() {
     const mat = new THREE.ShaderMaterial({
       uniforms: {
         uCore: { value: new THREE.Color("#ffffff") },
-        uGlow: { value: new THREE.Color("#8fb8ff") },
-        uAfter: { value: new THREE.Color("#8a5cff") },
+        uGlow: { value: new THREE.Color("#ffffff") },
+        uAfter: { value: new THREE.Color("#4d7cff") },
         uLife: { value: 0 },
         uReveal: { value: 0 },
         uHeat: { value: 1 },
@@ -213,7 +213,7 @@ export function createLightning() {
       sparkGeo,
       new THREE.PointsMaterial({
         map: glow,
-        color: "#dbe8ff",
+        color: "#f0f5ff",
         size: 0.05,
         transparent: true,
         depthWrite: false,
@@ -230,8 +230,8 @@ export function createLightning() {
       mesh,
       geo,
       mat,
-      flare: sprite("#d8e6ff"),
-      impact: sprite("#c4d8ff"),
+      flare: sprite("#ffffff"),
+      impact: sprite("#dbe8ff"),
       sparks,
       sparkData: Array.from({ length: SPARKS }, () => ({ p: new THREE.Vector3(), v: new THREE.Vector3() })),
       lines: [],
@@ -437,16 +437,16 @@ export function createLightning() {
         // The afterglow lingers dimly, cooling in colour.
         intensity += 0.12 * Math.max(0, 1 - since / (b.end - b.leader));
       }
-      u.uLife.value = Math.min(intensity, 1.4);
-      u.uHeat.value = Math.min(1, intensity * 1.6);
+      u.uLife.value = Math.min(intensity, 1.4) * 0.7;
+      u.uHeat.value = Math.min(1, intensity * 1.1);
 
       const flareMat = b.flare.material as THREE.SpriteMaterial;
-      flareMat.opacity = Math.min(1, intensity);
-      b.flare.scale.setScalar((0.45 + b.power * 0.5) * (0.8 + intensity * 0.5));
+      flareMat.opacity = Math.min(1, intensity) * 0.55;
+      b.flare.scale.setScalar((0.35 + b.power * 0.4) * (0.8 + intensity * 0.35));
 
       if (b.impact.visible) {
         const im = b.impact.material as THREE.SpriteMaterial;
-        im.opacity = Math.min(1, intensity * 1.1);
+        im.opacity = Math.min(1, intensity * 1.1) * 0.55;
         b.impact.scale.setScalar(0.5 + intensity * 0.6);
       }
       if (b.sparks.visible) {
@@ -459,7 +459,7 @@ export function createLightning() {
         });
         pos.needsUpdate = true;
         const sm = b.sparks.material as THREE.PointsMaterial;
-        sm.opacity = Math.max(0, 1 - (b.age - b.leader) / 0.55);
+        sm.opacity = Math.max(0, 1 - (b.age - b.leader) / 0.55) * 0.6;
         sm.size = 0.045 * worldScale;
       }
 
@@ -476,7 +476,7 @@ export function createLightning() {
       }
     }
     if (strongest > 0) flashOrigin.copy(tmp);
-    return Math.min(flash, 1.6);
+    return Math.min(flash, 1.6) * 0.4; // the whole-sky flash is kept subtle
   }
 
   function setTheme(light: boolean) {
@@ -484,18 +484,18 @@ export function createLightning() {
     for (const b of bolts) {
       // On the pale page, a deep orange glow keeps the bolts visible.
       b.mat.blending = blending;
-      b.mat.uniforms.uGlow.value.set(light ? "#f97316" : "#8fb8ff");
-      b.mat.uniforms.uAfter.value.set(light ? "#e11d48" : "#8a5cff");
+      b.mat.uniforms.uGlow.value.set(light ? "#f97316" : "#ffffff");
+      b.mat.uniforms.uAfter.value.set(light ? "#e11d48" : "#4d7cff");
       b.mat.uniforms.uCore.value.set(light ? "#fff7ed" : "#ffffff");
       b.mat.needsUpdate = true;
       for (const s of [b.flare, b.impact]) {
         const m = s.material as THREE.SpriteMaterial;
         m.blending = blending;
-        m.color.set(light ? "#ffb37a" : "#d8e6ff");
+        m.color.set(light ? "#ffb37a" : "#f0f5ff");
       }
       const sm = b.sparks.material as THREE.PointsMaterial;
       sm.blending = blending;
-      sm.color.set(light ? "#ea580c" : "#dbe8ff");
+      sm.color.set(light ? "#ea580c" : "#f0f5ff");
     }
   }
 
