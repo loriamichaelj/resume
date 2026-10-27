@@ -173,7 +173,7 @@ export function createNetwork(opts: {
     }
     base = light ? 0.75 : 1;
     shared.uA.value.set(light ? "#ea580c" : opts.colors[0]);
-    shared.uB.value.set(light ? "#e11d48" : opts.colors[1]);
+    shared.uB.value.set(light ? "#c2410c" : opts.colors[1]);
   }
   let base = 1;
   setTheme(opts.light);

@@ -198,7 +198,7 @@ export function createSky(opts: { light: boolean }) {
     return s;
   };
   // A tight bright glow and a wide faint one, like moonlight in haze.
-  const moonHalos = [halo(3.2, 0.42, "#dfe6ff"), halo(9, 0.12, "#9fb0ff")];
+  const moonHalos = [halo(3.2, 0.42, "#f0f5ff"), halo(9, 0.12, "#9ab8ff")];
   const moonGroup = new THREE.Group();
   moonGroup.add(...moonHalos, moon);
   group.add(moonGroup);

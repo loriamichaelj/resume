@@ -16,7 +16,7 @@ const lastChars = [...lastName];
       <p class="eyebrow reveal flex items-center gap-3">
         <span class="relative flex h-2 w-2" aria-hidden="true">
           <span class="absolute inset-0 animate-ping-soft rounded-full bg-[rgb(var(--c-dot))]"></span>
-          <span class="relative h-2 w-2 rounded-full bg-[rgb(var(--c-dot))]"></span>
+          <span class="status-dot relative h-2 w-2 rounded-full bg-[rgb(var(--c-dot))]"></span>
         </span>
         {profile.role}
       </p>
@@ -44,7 +44,7 @@ const lastChars = [...lastName];
         {heroRotator.prefix}
         <span class="rotator" data-rotator>
           {heroRotator.words.map((w, i) => (
-            <span class={`rotator-word text-gradient ${i === 0 ? "is-active" : ""}`}>{w}</span>
+            <span class={`rotator-word text-accent ${i === 0 ? "is-active" : ""}`}>{w}</span>
           ))}
         </span>
         {heroRotator.suffix}
@@ -96,16 +96,9 @@ const lastChars = [...lastName];
         data-cloud-alpha="1"
       >
         <div class="cloud-fallback absolute inset-0 flex items-center justify-center" aria-hidden="true">
-          <div class="absolute inset-8 animate-float rounded-full bg-brand-gradient opacity-30 blur-3xl"></div>
-          <svg viewBox="0 0 24 24" class="relative w-3/4 animate-float drop-shadow-[0_20px_40px_rgba(123,97,255,0.45)]">
-            <defs>
-              <linearGradient id="cloud-fallback-fill" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stop-color="#ffffff" />
-                <stop offset="0.55" stop-color="#c7b6ff" />
-                <stop offset="1" stop-color="#7b61ff" />
-              </linearGradient>
-            </defs>
-            <path d="M17.5 19H7a5 5 0 1 1 .9-9.92A6.5 6.5 0 0 1 20.4 11 4 4 0 0 1 17.5 19Z" fill="url(#cloud-fallback-fill)" />
+          <div class="absolute inset-8 animate-float rounded-full bg-aqua opacity-20 blur-3xl"></div>
+          <svg viewBox="0 0 24 24" class="relative w-3/4 animate-float drop-shadow-[0_20px_40px_rgb(var(--c-aqua)_/_0.3)]">
+            <path d="M17.5 19H7a5 5 0 1 1 .9-9.92A6.5 6.5 0 0 1 20.4 11 4 4 0 0 1 17.5 19Z" style="fill: rgb(var(--c-aqua) / 0.85)" />
           </svg>
         </div>
       </div>

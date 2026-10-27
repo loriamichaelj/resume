@@ -64,34 +64,35 @@ const fragmentShader = /* glsl */ `
 `;
 
 // One palette per section: hero, about, experience, services, skills, contact.
-// Slots 1-3 are the large colour fields, slot 4 the ribbon. Warm peach only
-// goes in the ribbon: as a big low-intensity field on dark it turns muddy.
-const INDIGO = "#4f46ff";
-const MAGENTA = "#c35cff";
+// Slots 1-3 are the large colour fields, slot 4 the ribbon. Dark is blues
+// over the blue-black base; light is a pale orange wash.
+const ROYAL = "#162f9e";
+const INDIGO = "#3a24a8";
+const CYAN = "#1f5bbf";
+const MAGENTA = "#27389a";
+const NEON = "#9ab8ff";
 const toColors = (sets: string[][]) => sets.map((set) => set.map((hex) => new THREE.Color(hex)));
 const DARK_SECTIONS = toColors([
-  [PALETTE.violet, MAGENTA, PALETTE.aqua, PALETTE.peach],
-  [PALETTE.aqua, INDIGO, MAGENTA, PALETTE.rose],
-  [MAGENTA, INDIGO, PALETTE.aqua, PALETTE.rose],
-  [INDIGO, PALETTE.aqua, PALETTE.rose, PALETTE.peach],
-  [PALETTE.rose, PALETTE.violet, PALETTE.aqua, PALETTE.aqua],
-  [PALETTE.aqua, MAGENTA, PALETTE.violet, PALETTE.peach],
+  [ROYAL, CYAN, INDIGO, NEON],
+  [CYAN, ROYAL, MAGENTA, NEON],
+  [INDIGO, ROYAL, CYAN, MAGENTA],
+  [ROYAL, MAGENTA, CYAN, NEON],
+  [MAGENTA, INDIGO, CYAN, NEON],
+  [CYAN, INDIGO, ROYAL, MAGENTA],
 ]);
-// Light theme: a warm, sunlit sky of gold, amber, orange and coral.
-const GOLD = "#ffd166";
-const AMBER = "#ffb347";
-const ORANGE = "#ff8a3d";
-const CORAL = "#ff6b5b";
-const BLUSH = "#ff8fab";
+// Light theme: a soft orange wash.
+const PEACH = "#fed7aa";
+const APRICOT = "#fdba74";
+const CREAM = "#ffedd5";
+const ORANGE = "#fb923c";
 const LIGHT_SECTIONS = toColors([
-  [GOLD, ORANGE, CORAL, AMBER],
-  [ORANGE, AMBER, BLUSH, GOLD],
-  [CORAL, GOLD, ORANGE, AMBER],
-  [AMBER, CORAL, GOLD, ORANGE],
-  [ORANGE, BLUSH, AMBER, GOLD],
-  [GOLD, CORAL, ORANGE, AMBER],
+  [PEACH, APRICOT, CREAM, ORANGE],
+  [APRICOT, PEACH, CREAM, ORANGE],
+  [CREAM, PEACH, APRICOT, ORANGE],
+  [PEACH, ORANGE, CREAM, APRICOT],
+  [APRICOT, CREAM, PEACH, ORANGE],
+  [PEACH, APRICOT, CREAM, ORANGE],
 ]);
-
 
 export function createAurora(opts: { light: boolean }) {
   let sections = opts.light ? LIGHT_SECTIONS : DARK_SECTIONS;
