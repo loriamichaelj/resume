@@ -81,10 +81,10 @@ const DARK_SECTIONS = toColors([
   [CYAN, INDIGO, ROYAL, MAGENTA],
 ]);
 // Light theme: a soft orange wash.
-const PEACH = "#fed7aa";
-const APRICOT = "#fdba74";
-const CREAM = "#ffedd5";
-const ORANGE = "#fb923c";
+const PEACH = "#fdba74";
+const APRICOT = "#fb923c";
+const CREAM = "#fed7aa";
+const ORANGE = "#f97316";
 const LIGHT_SECTIONS = toColors([
   [PEACH, APRICOT, CREAM, ORANGE],
   [APRICOT, PEACH, CREAM, ORANGE],
@@ -119,12 +119,12 @@ export function createAurora(opts: { light: boolean }) {
   mesh.frustumCulled = false;
   mesh.renderOrder = -100;
 
-  let intensity = opts.light ? 0.34 : 0.3;
+  let intensity = opts.light ? 0.5 : 0.3;
   const tmp = new THREE.Color();
   const slots = [uniforms.uC1, uniforms.uC2, uniforms.uC3, uniforms.uC4];
 
   function setTheme(light: boolean) {
-    intensity = light ? 0.34 : 0.3;
+    intensity = light ? 0.5 : 0.3;
     sections = light ? LIGHT_SECTIONS : DARK_SECTIONS;
   }
 

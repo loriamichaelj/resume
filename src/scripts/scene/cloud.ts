@@ -222,10 +222,10 @@ const fragmentShader = /* glsl */ `
 `;
 
 const THEMES = {
-  dark: { sun: "#ffffff", top: "#d6e4ff", bottom: "#101a5c", warm: PALETTE.rose, cool: PALETTE.aqua, ambient: [0.3, 0.42] },
+  dark: { sun: "#ffffff", top: "#ffffff", bottom: "#b4c1e8", warm: PALETTE.rose, cool: PALETTE.aqua, ambient: [0.6, 0.42] },
   // Light: a sunlit cloud with a warm coral underside. Shadows stay lifted,
   // because dark ones on a pale page read as a storm cloud.
-  light: { sun: "#fff0d6", top: "#fffaf3", bottom: "#f7a983", warm: "#ff8f70", cool: "#ffc46b", ambient: [0.72, 0.26] },
+  light: { sun: "#ffe4c2", top: "#fff1e0", bottom: "#fb8c3c", warm: "#ff7a2e", cool: "#ffa63d", ambient: [0.72, 0.26] },
 };
 
 function noiseTexture(data: Uint8Array, size: number) {

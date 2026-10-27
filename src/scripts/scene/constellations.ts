@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { PALETTE } from "./util";
 
 // Real constellations for the night sky, scattered down the scrolling column:
 // stars sized by brightness and twinkling, joined by faint lines that a slow
@@ -80,26 +79,37 @@ const FIGURES: Record<string, Figure> = {
   },
 };
 
+// Hue (0..1) -> a fully saturated rainbow colour.
+const hueGlsl = /* glsl */ `
+  vec3 rainbow(float h) {
+    return clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+  }
+`;
+
 const starVertex = /* glsl */ `
   attribute float aSize;
+  attribute float aHue;
   attribute float aSeed;
   uniform float uTime;
   uniform float uScale;
   varying float vTwinkle;
   varying float vSeed;
+  varying float vHue;
   void main() {
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     gl_Position = projectionMatrix * mv;
     vTwinkle = 0.7 + 0.3 * sin(uTime * (1.2 + aSeed * 2.0) + aSeed * 40.0);
     vSeed = aSeed;
+    vHue = aHue;
     gl_PointSize = aSize * uScale / -mv.z;
   }
 `;
 const starFragment = /* glsl */ `
   uniform float uOpacity;
-  uniform vec3 uTint;
   varying float vTwinkle;
   varying float vSeed;
+  varying float vHue;
+  ${hueGlsl}
   void main() {
     vec2 c = gl_PointCoord - 0.5;
     float d = length(c);
@@ -109,30 +119,32 @@ const starFragment = /* glsl */ `
     float glint = (exp(-abs(c.x) * 60.0) + exp(-abs(c.y) * 60.0)) * exp(-d * 6.0) * 0.25;
     float a = (core + glow + glint) * vTwinkle * uOpacity;
     if (a < 0.004) discard;
-    vec3 col = mix(vec3(1.0), uTint, 0.35 + 0.3 * vSeed);
+    vec3 col = mix(vec3(1.0), rainbow(vHue), 0.7 + 0.2 * vSeed);
     gl_FragColor = vec4(col, a);
   }
 `;
 const lineVertex = /* glsl */ `
   attribute float aT;
+  attribute float aHue;
   varying float vT;
+  varying float vHue;
   void main() {
     vT = aT;
+    vHue = aHue;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `;
 const lineFragment = /* glsl */ `
   uniform float uTime;
   uniform float uOpacity;
-  uniform vec3 uTint;
   varying float vT;
+  varying float vHue;
+  ${hueGlsl}
   void main() {
     float shimmer = 0.6 + 0.4 * sin(vT * 6.2831 - uTime * 1.2);
-    gl_FragColor = vec4(uTint, 0.22 * shimmer * uOpacity);
+    gl_FragColor = vec4(rainbow(vHue), 0.3 * shimmer * uOpacity);
   }
 `;
-
-const TINTS = [PALETTE.aqua, PALETTE.violet, PALETTE.rose, PALETTE.peach, PALETTE.aqua, PALETTE.violet];
 
 export function createConstellations(opts: { span: number }) {
   const group = new THREE.Group();
@@ -143,13 +155,16 @@ export function createConstellations(opts: { span: number }) {
 
   names.forEach((name, i) => {
     const fig = FIGURES[name];
-    const tint = new THREE.Color(TINTS[i % TINTS.length]);
     const obj = new THREE.Group();
 
     const pos = new Float32Array(fig.stars.length * 3);
     const size = new Float32Array(fig.stars.length);
     const seed = new Float32Array(fig.stars.length);
+    // Each star takes the next hue round the wheel; each figure starts at its own.
+    const hue = new Float32Array(fig.stars.length);
+    const hueOf = (k: number) => (k / fig.stars.length + i * 0.17) % 1;
     fig.stars.forEach(([x, y, b], k) => {
+      hue[k] = hueOf(k);
       pos.set([x, y, 0], k * 3);
       size[k] = 0.1 + b * 0.16;
       seed[k] = (k * 0.37 + i * 0.13) % 1;
@@ -158,8 +173,9 @@ export function createConstellations(opts: { span: number }) {
     sGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
     sGeo.setAttribute("aSize", new THREE.BufferAttribute(size, 1));
     sGeo.setAttribute("aSeed", new THREE.BufferAttribute(seed, 1));
+    sGeo.setAttribute("aHue", new THREE.BufferAttribute(hue, 1));
     const starMat = new THREE.ShaderMaterial({
-      uniforms: { uTime: { value: 0 }, uScale: { value: 1 }, uOpacity: { value: 1 }, uTint: { value: tint } },
+      uniforms: { uTime: { value: 0 }, uScale: { value: 1 }, uOpacity: { value: 1 } },
       vertexShader: starVertex,
       fragmentShader: starFragment,
       transparent: true,
@@ -172,16 +188,20 @@ export function createConstellations(opts: { span: number }) {
 
     const lPos = new Float32Array(fig.lines.length * 6);
     const lT = new Float32Array(fig.lines.length * 2);
+    const lHue = new Float32Array(fig.lines.length * 2); // each end takes its star's hue
     fig.lines.forEach(([a, b], k) => {
       lPos.set([fig.stars[a][0], fig.stars[a][1], 0, fig.stars[b][0], fig.stars[b][1], 0], k * 6);
       lT[k * 2] = k / fig.lines.length;
       lT[k * 2 + 1] = (k + 1) / fig.lines.length;
+      lHue[k * 2] = hueOf(a);
+      lHue[k * 2 + 1] = hueOf(b);
     });
     const lGeo = new THREE.BufferGeometry();
     lGeo.setAttribute("position", new THREE.BufferAttribute(lPos, 3));
     lGeo.setAttribute("aT", new THREE.BufferAttribute(lT, 1));
+    lGeo.setAttribute("aHue", new THREE.BufferAttribute(lHue, 1));
     const lineMat = new THREE.ShaderMaterial({
-      uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 }, uTint: { value: tint } },
+      uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 } },
       vertexShader: lineVertex,
       fragmentShader: lineFragment,
       transparent: true,
