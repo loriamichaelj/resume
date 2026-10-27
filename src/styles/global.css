@@ -17,7 +17,7 @@
      RGB channels so Tailwind's rgb(var(--x) / <alpha-value>) can apply opacity. */
   :root {
     color-scheme: dark;
-    --c-fg: 160 182 222; /* foreground / text  -> Tailwind `white` (soft blue) */
+    --c-fg: 240 245 253; /* foreground / text  -> Tailwind `white` (near-white, faint blue) */
     --c-ink-950: 2 5 13; /* page background    -> Tailwind `ink-950` */
     --c-ink-900: 7 12 26; /* elevated card bg  -> Tailwind `ink-900` */
     --c-edge: 255 255 255; /* hairline / card-border highlight */
@@ -37,7 +37,7 @@
   :root.light {
     color-scheme: light;
     --c-fg: 28 25 23; /* graphite body text */
-    --c-ink-950: 250 249 245; /* warm paper page */
+    --c-ink-950: 255 245 233; /* warm peach-cream page */
     --c-ink-900: 255 255 255; /* white cards, elevated above the page */
     --c-edge: 28 25 23; /* hairlines on light surfaces */
     --c-orb-1: 249 115 22;
@@ -972,5 +972,41 @@
   /* The dot is the page colour, so give it a hairline to stay visible. */
   :root:not(.light) .status-dot {
     box-shadow: 0 0 0 1px rgb(var(--c-aqua) / 0.5);
+  }
+}
+
+/* Dark theme only: lift the dimmer text tints so small labels stay readable on
+   the blue-black base. Lives in the utilities layer so it beats the originals. */
+@layer utilities {
+  :root:not(.light) .text-white\/40 {
+    color: rgb(var(--c-fg) / 0.6);
+  }
+  :root:not(.light) .text-white\/45 {
+    color: rgb(var(--c-fg) / 0.65);
+  }
+  :root:not(.light) .text-white\/50 {
+    color: rgb(var(--c-fg) / 0.7);
+  }
+  :root:not(.light) .text-white\/55 {
+    color: rgb(var(--c-fg) / 0.74);
+  }
+  :root:not(.light) .text-white\/60 {
+    color: rgb(var(--c-fg) / 0.78);
+  }
+  :root:not(.light) .text-white\/65 {
+    color: rgb(var(--c-fg) / 0.82);
+  }
+  :root:not(.light) .text-white\/70 {
+    color: rgb(var(--c-fg) / 0.86);
+  }
+}
+
+/* Light theme: carry the orange into the small type and the backdrop. */
+@layer components {
+  :root.light .eyebrow {
+    color: rgb(var(--c-aqua) / 0.9);
+  }
+  :root.light body::before {
+    background-image: radial-gradient(60rem 40rem at 80% -10%, rgb(var(--c-orb-1) / 0.18), transparent 60%);
   }
 }

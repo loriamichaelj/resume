@@ -2,7 +2,8 @@ import * as THREE from "three";
 import { mulberry32, PALETTE } from "./util";
 
 // Twinkling starfield spread down the full scroll column, plus a few large,
-// soft "bokeh" particles close to the camera for depth.
+// soft "bokeh" particles close to the camera for depth. In the dark theme a
+// scattering of small four-point rainbow sparkles twinkle over the top.
 
 const vertexShader = /* glsl */ `
   attribute float aSize;
@@ -11,12 +12,13 @@ const vertexShader = /* glsl */ `
   uniform float uTime;
   uniform float uScale;
   uniform float uWarp;
+  uniform float uSharp; // >1 makes the twinkle a brief flash
   varying vec3 vColor;
   varying float vTwinkle;
   void main() {
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     gl_Position = projectionMatrix * mv;
-    vTwinkle = 0.55 + 0.45 * sin(uTime * (0.6 + aSeed * 1.8) + aSeed * 40.0);
+    vTwinkle = pow(0.55 + 0.45 * sin(uTime * (0.6 + aSeed * 1.8) + aSeed * 40.0), uSharp);
     gl_PointSize = aSize * uScale * (1.0 + uWarp) / -mv.z;
     vColor = aColor;
   }
@@ -35,6 +37,22 @@ const fragmentShader = /* glsl */ `
     if (a < 0.003) discard;
     vec3 col = mix(vColor, uWarm * (0.75 + 0.25 * vColor.r), uLight * 0.9);
     gl_FragColor = vec4(col, a);
+  }
+`;
+
+// A small cross-shaped glint: two thin crossing rays and a bright core.
+const sparkleFragment = /* glsl */ `
+  uniform float uOpacity;
+  varying vec3 vColor;
+  varying float vTwinkle;
+  void main() {
+    vec2 p = gl_PointCoord - 0.5;
+    float h = exp(-abs(p.y) * 70.0) * smoothstep(0.5, 0.0, abs(p.x));
+    float v = exp(-abs(p.x) * 70.0) * smoothstep(0.5, 0.0, abs(p.y));
+    float core = smoothstep(0.1, 0.0, length(p));
+    float a = clamp(h + v + core, 0.0, 1.0) * vTwinkle * uOpacity;
+    if (a < 0.003) discard;
+    gl_FragColor = vec4(mix(vColor, vec3(1.0), core * 0.6), a);
   }
 `;
 
@@ -63,6 +81,7 @@ function makeLayer(opts: {
   size: [number, number];
   soft: number;
   opacity: number;
+  sparkle?: boolean; // rainbow four-point glints instead of round stars
 }) {
   const rand = mulberry32(opts.seed);
   const pos = new Float32Array(opts.count * 3);
@@ -74,7 +93,9 @@ function makeLayer(opts: {
     pos[i * 3] = (rand() * 2 - 1) * opts.box.x;
     pos[i * 3 + 1] = 8 - rand() * (opts.span + 16);
     pos[i * 3 + 2] = opts.box.z[0] + rand() * (opts.box.z[1] - opts.box.z[0]);
-    pickColor(rand(), c).toArray(col, i * 3);
+    if (opts.sparkle) c.setHSL(rand(), 1, 0.68);
+    else pickColor(rand(), c);
+    c.toArray(col, i * 3);
     size[i] = opts.size[0] + Math.pow(rand(), 3) * (opts.size[1] - opts.size[0]);
     seed[i] = rand();
   }
@@ -89,20 +110,21 @@ function makeLayer(opts: {
       uTime: { value: 0 },
       uScale: { value: 1 },
       uWarp: { value: 0 },
+      uSharp: { value: opts.sparkle ? 3 : 1 },
       uOpacity: { value: opts.opacity },
       uSoft: { value: opts.soft },
       uLight: { value: 0 },
       uWarm: { value: new THREE.Color("#e8732a") },
     },
     vertexShader,
-    fragmentShader,
+    fragmentShader: opts.sparkle ? sparkleFragment : fragmentShader,
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });
   const points = new THREE.Points(geo, material);
   points.frustumCulled = false;
-  return { points, material, baseOpacity: opts.opacity };
+  return { points, material, baseOpacity: opts.opacity, darkOnly: !!opts.sparkle };
 }
 
 export function createStars(opts: { lowPower: boolean; span: number; light: boolean }) {
@@ -125,8 +147,18 @@ export function createStars(opts: { lowPower: boolean; span: number; light: bool
     soft: 1.1,
     opacity: 0.16,
   });
-  group.add(far.points, bokeh.points);
-  const layers = [far, bokeh];
+  const sparkles = makeLayer({
+    count: opts.lowPower ? 40 : 90,
+    seed: 53,
+    span: opts.span,
+    box: { x: 14, z: [-14, -4] },
+    size: [0.12, 0.3],
+    soft: 1,
+    opacity: 0.9,
+    sparkle: true,
+  });
+  group.add(far.points, bokeh.points, sparkles.points);
+  const layers = [far, bokeh, sparkles];
 
   function setTheme(light: boolean) {
     for (const l of layers) {
@@ -134,6 +166,7 @@ export function createStars(opts: { lowPower: boolean; span: number; light: bool
       l.material.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
       l.material.uniforms.uOpacity.value = l.baseOpacity * (light ? 0.55 : 1);
       l.material.needsUpdate = true;
+      if (l.darkOnly) l.points.visible = !light;
     }
   }
   setTheme(opts.light);
