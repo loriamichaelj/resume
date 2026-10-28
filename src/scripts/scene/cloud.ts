@@ -63,11 +63,37 @@ const compositeVertex = /* glsl */ `
   }
 `;
 
+// The buffer is stretched back up with a smooth (cubic B-spline) filter rather
+// than plain bilinear, which at 3-6x would show the buffer's texels as steps
+// along the cloud's edge. Four bilinear taps make one bicubic sample.
 const compositeFragment = /* glsl */ `
   uniform sampler2D tCloud;
+  uniform vec2 uSize; // buffer size in texels
   varying vec2 vUv;
+  vec4 cubic(float v) {
+    vec4 n = vec4(1.0, 2.0, 3.0, 4.0) - v;
+    vec4 s = n * n * n;
+    float x = s.x;
+    float y = s.y - 4.0 * s.x;
+    float z = s.z - 4.0 * s.y + 6.0 * s.x;
+    return vec4(x, y, z, 6.0 - x - y - z) / 6.0;
+  }
   void main() {
-    gl_FragColor = texture2D(tCloud, vUv); // already premultiplied
+    vec2 uv = vUv * uSize - 0.5;
+    vec2 f = fract(uv);
+    uv -= f;
+    vec4 xc = cubic(f.x);
+    vec4 yc = cubic(f.y);
+    vec4 c = uv.xxyy + vec2(-0.5, 1.5).xyxy;
+    vec4 s = vec4(xc.xz + xc.yw, yc.xz + yc.yw);
+    vec4 o = (c + vec4(xc.yw, yc.yw) / s) / uSize.xxyy;
+    vec4 s0 = texture2D(tCloud, o.xz);
+    vec4 s1 = texture2D(tCloud, o.yz);
+    vec4 s2 = texture2D(tCloud, o.xw);
+    vec4 s3 = texture2D(tCloud, o.yw);
+    float sx = s.x / (s.x + s.y);
+    float sy = s.z / (s.z + s.w);
+    gl_FragColor = mix(mix(s3, s2, sx), mix(s1, s0, sx), sy); // already premultiplied
   }
 `;
 
@@ -341,7 +367,11 @@ export function createCloud(opts: {
   const composite = new THREE.Mesh(
     new THREE.PlaneGeometry(2, 2),
     new THREE.ShaderMaterial({
-      uniforms: { tCloud: { value: buffer.texture }, uRect: { value: new THREE.Vector4(-1, -1, 1, 1) } },
+      uniforms: {
+        tCloud: { value: buffer.texture },
+        uSize: { value: new THREE.Vector2(1, 1) },
+        uRect: { value: new THREE.Vector4(-1, -1, 1, 1) },
+      },
       vertexShader: compositeVertex,
       fragmentShader: compositeFragment,
       transparent: true,
@@ -867,6 +897,7 @@ export function createCloud(opts: {
     volume.layers.set(offscreen ? CLOUD_LAYER : 0);
     if (offscreen) buffer.setSize(Math.max(1, Math.round(bufferW * scale)), Math.max(1, Math.round(bufferH * scale)));
     else buffer.setSize(1, 1); // free the memory
+    composite.material.uniforms.uSize.value.set(buffer.width, buffer.height);
   }
 
   // Before the main render: ray-march the volume into its buffer and fit the
