@@ -423,6 +423,7 @@ export function createCloud(opts: {
   // UFO targeting.
   const BOLT_ORIGIN = new THREE.Vector3(0, -0.05, 0); // roughly the cloud's middle, in root space
   const aim2 = new THREE.Vector3();
+  const behind: boolean[] = [];
   const pendingHits: { index: number; at: number }[] = [];
   let lastFrame: CloudFrame | null = null;
   const sunWorld = SUN.clone();
@@ -465,7 +466,7 @@ export function createCloud(opts: {
   let bank = 0;
   let squash = 0;
   let yaw = 0;
-  let screen = { x: 0, y: 0, r: 0 };
+  const screen = { x: 0, y: 0, r: 0 };
   let ready = false; // the cloud fades in once its noise is baked
   loadNoise(noiseSize).then((tex) => {
     uniforms.uNoise.value.dispose();
@@ -549,7 +550,9 @@ export function createCloud(opts: {
       body.scale.set(1 - squash * 0.5, 1 + squash, 1 - squash * 0.5);
       body.position.y = Math.sin(time * 0.7) * 0.04;
 
-      screen = { x: target.x, y: target.y, r: target.size * 0.5 };
+      screen.x = target.x;
+      screen.y = target.y;
+      screen.r = target.size * 0.5;
     }
     uniforms.uAlpha.value = alpha;
     // Nothing to see (not baked yet, or faded out): skip the ray march.
@@ -653,7 +656,7 @@ export function createCloud(opts: {
     orbits.visible = fleetVis > 0.01;
     const fleetAlpha = smoothstep((alpha - 0.3) / 0.5) * fleetVis;
     orbits.rotation.y = time * 0.05;
-    const behind: boolean[] = [];
+    behind.length = 0;
     for (const o of ufos) {
       const angle = time * o.speed + o.phase;
       o.ufo.ship.position.set(Math.cos(angle) * o.radius, 0, Math.sin(angle) * o.radius * ORBIT_Z);

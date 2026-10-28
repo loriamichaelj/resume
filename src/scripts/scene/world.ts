@@ -269,6 +269,7 @@ export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
     skyClouds.update(time, dt, 1 - night);
     aurora.update(time, target?.section ?? 0, dt, flash);
 
+    aurora.render(renderer, camera);
     cloud.render(renderer, camera);
     renderer.render(scene, camera);
   }
