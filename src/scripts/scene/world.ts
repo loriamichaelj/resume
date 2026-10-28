@@ -291,12 +291,22 @@ export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
   // (the cloud's resolution first, then the canvas's); step back up after a
   // sustained smooth stretch, up to the tier's ceiling. Each step down doubles
   // the wait before trying the next rung up, so a device settles instead of
-  // bouncing between two. Touch devices only step down: each change
-  // reallocates buffers, and bouncing back up would hitch the scroll again.
+  // bouncing between two. Touch devices only climb back while the page is at
+  // rest: each change reallocates buffers, which would hitch a scroll.
+  //
+  // Long frames aren't always the GPU's fault. iOS Low Power Mode caps
+  // requestAnimationFrame at 30 fps however light the scene is, and reading
+  // that as a slow GPU would strip the resolution for nothing (and remember
+  // it). So a step down is a trial: if frames are no faster a moment later,
+  // the cap is the cause, the step is undone and the session stops stepping down.
   let slow = 0;
   let smooth = 0;
   let upAfter = 8;
   let warmup = 2; // seconds: start-up (fonts, parsing, uploads) hitches anyway
+  let avgDt = 1 / 60; // smoothed frame time
+  let capped = false; // frames are long whatever the resolution
+  let trial: { from: number; before: number; time: number; sum: number; frames: number } | null = null;
+  const TRIAL = { settle: 0.5, length: 1.5 }; // seconds
   const sameRung = (a: number, b: number) => ratioAt(a) === ratioAt(b) && LEVELS[a].cloud === LEVELS[b].cloud;
   function setLevel(next: number) {
     // Skip rungs that change nothing on this screen (ratios above its own).
@@ -314,19 +324,42 @@ export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
       warmup -= dt;
       return;
     }
+    avgDt += (dt - avgDt) * 0.05;
+
+    if (trial) {
+      trial.time += dt;
+      if (trial.time > TRIAL.settle) {
+        trial.sum += dt;
+        trial.frames++;
+      }
+      if (trial.time < TRIAL.length) return;
+      const after = trial.sum / Math.max(1, trial.frames);
+      // Still long and barely faster: the resolution wasn't the limit.
+      if (after > 1 / 45 && after > trial.before * 0.9) {
+        capped = true;
+        setLevel(trial.from);
+      }
+      trial = null;
+      slow = 0;
+      smooth = 0;
+      return;
+    }
+
     if (dt > 1 / 45) {
-      slow += dt;
+      if (!capped) slow += dt;
       smooth = 0;
     } else {
       smooth += dt;
       slow = Math.max(0, slow - dt * 0.5);
+      if (capped && smooth > 3) capped = false; // the cap lifted (Low Power Mode off)
     }
     if (slow > 1 && level > 0) {
+      trial = { from: level, before: avgDt, time: 0, sum: 0, frames: 0 };
       setLevel(level - 1);
       upAfter = Math.min(upAfter * 2, 120);
       slow = 0;
       smooth = 0;
-    } else if (!quality.touch && smooth > upAfter && level < quality.max) {
+    } else if (smooth > upAfter && level < quality.max && (!quality.touch || Math.abs(scrollVel) < 1)) {
       setLevel(level + 1);
       smooth = 0;
     }
