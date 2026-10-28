@@ -10,6 +10,18 @@ const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const finePointer = matchMedia("(hover: hover) and (pointer: fine)").matches;
 const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(min, v));
 
+// Phones fire `resize` whenever the browser toolbar slides in or out, mid
+// scroll. The measurements that depend on the viewport width alone shouldn't
+// re-run (and force a layout) for a change in height.
+const onWidthChange = (cb: () => void) => {
+  let last = window.innerWidth;
+  window.addEventListener("resize", () => {
+    if (window.innerWidth === last) return;
+    last = window.innerWidth;
+    cb();
+  });
+};
+
 // ---- Scroll reveal -----------------------------------------------------------
 const reveals = document.querySelectorAll<HTMLElement>(".reveal");
 if (reduceMotion || !("IntersectionObserver" in window)) {
@@ -45,7 +57,7 @@ document.querySelectorAll<HTMLElement>("[data-rotator]").forEach((rotator) => {
   measure();
   words[0].style.position = "absolute";
   document.fonts?.ready.then(measure);
-  window.addEventListener("resize", measure);
+  onWidthChange(measure);
   setInterval(() => {
     if (document.hidden) return;
     const prev = words[i];
@@ -149,7 +161,7 @@ function measureMarquee() {
   }
 }
 measureMarquee();
-window.addEventListener("resize", measureMarquee);
+onWidthChange(measureMarquee);
 document.fonts?.ready.then(measureMarquee);
 
 const pointer = { x: window.innerWidth / 2, y: window.innerHeight / 2, gx: 0, gy: 0, seen: false };
@@ -267,4 +279,4 @@ function frame(_: number, dt: number) {
   }
 }
 onFrame(frame, 0);
-window.addEventListener("resize", () => moveIndicator(activeNav));
+onWidthChange(() => moveIndicator(activeNav));

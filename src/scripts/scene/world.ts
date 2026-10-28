@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { CloudPath } from "./anchors";
+import { CloudPath, type CloudTarget } from "./anchors";
 import { createAurora } from "./aurora";
 import { createCloud } from "./cloud";
 import { createNetwork, NETWORK_COLORS } from "./network";
@@ -106,6 +106,7 @@ export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
   // Under reduced motion the still frame is redrawn once the cloud can show.
   const cloud = createCloud({
     quality: quality.cloud,
+    follow: quality.touch ? 16 : 9,
     light,
     labels,
     onReady: () => reduceMotion && renderStatic(),
@@ -115,16 +116,19 @@ export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
   const path = new CloudPath();
 
   // ---- Layout ------------------------------------------------------------------
+  // The canvas is 100lvh, so `height` stays put when a phone's toolbar slides
+  // in and out; window.innerHeight doesn't, and anything scroll-related that
+  // used it would jump with the toolbar.
   let width = 1;
   let height = 1;
 
   // Park each network beside the section it belongs to, in the side margin.
   function placeNetworks() {
-    const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    const maxScroll = Math.max(1, document.documentElement.scrollHeight - height);
     const at = (id: string) => {
       const el = document.getElementById(id);
       if (!el) return 0.5;
-      const mid = el.offsetTop + el.offsetHeight / 2 - window.innerHeight / 2;
+      const mid = el.offsetTop + el.offsetHeight / 2 - height / 2;
       return clamp(mid / maxScroll);
     };
     const tanHalf = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
@@ -212,6 +216,7 @@ export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
   let scrollVel = 0;
   let progress = 0;
   let roll = 0;
+  let anchor: CloudTarget | null = null;
 
   const lightDir = new THREE.Vector3();
   const smoothLight = new THREE.Vector3(0.45, 0.85, 0.4).normalize();
@@ -224,7 +229,7 @@ export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
 
     // Scroll is already smoothed by Lenis (or native touch), so use it as is:
     // extra damping here would make the backdrop lag behind the page.
-    const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    const maxScroll = Math.max(1, document.documentElement.scrollHeight - height);
     progress = animate ? clamp(sy / maxScroll) : 0;
     column.position.y = progress * SPAN;
 
@@ -248,8 +253,9 @@ export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
     smoothLight.lerp(lightDir, 1 - Math.exp(-3 * dt)).normalize();
     cloud.setLightDir(smoothLight);
 
-    const rect = reduceMotion ? canvas.getBoundingClientRect() : fixedRect;
-    const target = path.sample(rect, window.innerHeight);
+    // Animated frames use the anchors sampled at the top of the frame, before
+    // any DOM writes (see the frame loop below).
+    const target = animate ? anchor : path.sample(canvas.getBoundingClientRect(), height);
     const flash = cloud.update({
       dt,
       time,
@@ -341,20 +347,32 @@ export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
   function stop() {
     running = false;
   }
-  // Runs after smooth scrolling and DOM motion in the shared frame loop.
+  // Two halves of one frame. The first runs right after smooth scrolling and
+  // before the DOM motion writes anything: it decides whether this frame is
+  // due and reads the cloud's anchors, so the layout reads never follow style
+  // writes (which would force a second layout every scrolled frame, a main
+  // thread stall that shows as stutter on phones). The second renders, after
+  // the DOM motion has run.
+  let due = 0; // seconds to advance this frame; 0: skip it
+  let throttled = false;
   onFrame((now, dt) => {
+    due = 0;
     if (!running || document.hidden) return;
     if (window.scrollY !== lastScroll) lastInput = now;
-    const idle = isIdle(now);
-    const fps = idle ? quality.idleFps : quality.maxFps;
+    throttled = isIdle(now);
+    const fps = throttled ? quality.idleFps : quality.maxFps;
     pending += dt;
     // Half a frame of slack, so a cap near the display rate doesn't drop frames.
     if (fps > 0 && pending < 1 / fps - dt * 0.5) return;
-    const elapsed = pending;
+    due = pending;
     pending = 0;
-    step(elapsed, true);
+    anchor = path.sample(fixedRect, height);
+  }, -5);
+  onFrame(() => {
+    if (!due) return;
+    step(due, true);
     // Throttled frames say nothing about how the GPU is coping.
-    if (!idle) adapt(elapsed);
+    if (!throttled) adapt(due);
   }, 10);
 
   if (reduceMotion) {

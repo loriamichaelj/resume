@@ -280,6 +280,7 @@ export function createCloud(opts: {
   quality: Quality["cloud"];
   light: boolean;
   labels: HTMLElement[];
+  follow?: number; // how tightly it tracks its anchor (1/s)
   onReady?: () => void;
 }) {
   const q = opts.quality;
@@ -528,8 +529,9 @@ export function createCloud(opts: {
       screenToPlane(target.x, target.y, f, tmp);
       const worldPerPx = (2 * Math.tan(THREE.MathUtils.degToRad(f.camera.fov / 2)) * f.camera.position.z) / f.height;
       const scale = (target.size * worldPerPx * 0.92) / WIDTH;
-      // Scrolling is already smoothed (Lenis), so follow the anchor closely.
-      const k = placed ? 1 - Math.exp(-9 * dt) : 1;
+      // Scrolling is already smoothed (Lenis on desktop, the OS on touch), so
+      // follow the anchor closely.
+      const k = placed ? 1 - Math.exp(-(opts.follow ?? 9) * dt) : 1;
       root.position.lerp(tmp, k);
       root.scale.setScalar(THREE.MathUtils.lerp(root.scale.x, scale, k));
       if (!placed) lastX = root.position.x;
@@ -681,11 +683,18 @@ export function createCloud(opts: {
     ufos.forEach((o, i) => {
       const el = opts.labels[i];
       if (!el) return;
+      const opacity = labelsAlpha * o.ufo.visibility() * (behind[i] ? 0.3 : 1);
+      // Invisible (day, or before the cloud has faded in): no need to keep
+      // moving it, and every style write is main-thread work.
+      if (opacity < 0.003) {
+        if (el.style.opacity !== "0") el.style.opacity = "0";
+        return;
+      }
       o.ufo.ship.getWorldPosition(tmp).project(f.camera);
       const x = (tmp.x * 0.5 + 0.5) * f.width;
       const y = (-tmp.y * 0.5 + 0.5) * f.height;
       el.style.transform = `translate3d(${(x + 12).toFixed(1)}px, ${(y - 30).toFixed(1)}px, 0)`;
-      el.style.opacity = (labelsAlpha * o.ufo.visibility() * (behind[i] ? 0.3 : 1)).toFixed(3);
+      el.style.opacity = opacity.toFixed(3);
       // Health bar: one segment per hit point.
       const hp = o.ufo.health();
       if (el.dataset.hp !== String(hp)) {
