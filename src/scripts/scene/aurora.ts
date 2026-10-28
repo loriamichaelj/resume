@@ -28,10 +28,6 @@ const fragmentShader = /* glsl */ `
     vec2 d = p - c;
     return exp(-dot(d, d) / (r * r));
   }
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
-  }
-
   void main() {
     float asp = uRes.x / uRes.y;
     vec2 p = vec2(vUv.x * asp, vUv.y);
@@ -57,9 +53,24 @@ const fragmentShader = /* glsl */ `
     hue = mix(hue, vec3(0.75, 0.82, 1.0), clamp(wash * 4.0, 0.0, 0.6));
     s = clamp(s + wash, 0.0, 1.0);
 
-    // Film grain keeps the soft gradients from banding.
+    gl_FragColor = vec4(hue * s, s);
+  }
+`;
+
+// The aurora is only soft gradients, so it is drawn into a small buffer and
+// stretched over the canvas. Film grain is added after the stretch, at full
+// resolution, so the dark gradients don't band.
+const compositeFragment = /* glsl */ `
+  uniform sampler2D tAurora;
+  uniform float uTime;
+  varying vec2 vUv;
+  float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+  }
+  void main() {
+    vec4 c = texture2D(tAurora, vUv); // premultiplied
     float g = (hash(gl_FragCoord.xy + fract(uTime) * 91.0) - 0.5) * 0.035;
-    gl_FragColor = vec4(hue * s + g * s, s);
+    gl_FragColor = vec4(c.rgb + g * c.a, c.a);
   }
 `;
 
@@ -106,10 +117,26 @@ export function createAurora(opts: { light: boolean }) {
     uC3: { value: sections[0][2].clone() },
     uC4: { value: sections[0][3].clone() },
   };
+  // The gradients render into a quarter-size buffer (CSS pixels, so a retina
+  // screen costs no more than a standard one) and a cheap quad lays it over the
+  // canvas. The vertex shader ignores the camera, so any camera will do.
+  const SCALE = 0.25;
+  const buffer = new THREE.WebGLRenderTarget(1, 1, { depthBuffer: false });
+  buffer.texture.minFilter = buffer.texture.magFilter = THREE.LinearFilter;
+  // No blending: the premultiplied colour is stored as it is, for the quad to
+  // blend onto the canvas.
+  const paint = new THREE.Mesh(
+    new THREE.PlaneGeometry(2, 2),
+    new THREE.ShaderMaterial({ uniforms, vertexShader, fragmentShader, depthTest: false, depthWrite: false }),
+  );
+  paint.frustumCulled = false;
+  const source = new THREE.Scene();
+  source.add(paint);
+
   const material = new THREE.ShaderMaterial({
-    uniforms,
+    uniforms: { tAurora: { value: buffer.texture }, uTime: uniforms.uTime },
     vertexShader,
-    fragmentShader,
+    fragmentShader: compositeFragment,
     transparent: true,
     premultipliedAlpha: true,
     depthTest: false,
@@ -130,6 +157,14 @@ export function createAurora(opts: { light: boolean }) {
 
   function resize(w: number, h: number) {
     uniforms.uRes.value.set(w, h);
+    buffer.setSize(Math.max(2, Math.round(w * SCALE)), Math.max(2, Math.round(h * SCALE)));
+  }
+
+  // Before the main render: paint the gradients into the small buffer.
+  function render(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
+    renderer.setRenderTarget(buffer);
+    renderer.render(source, camera);
+    renderer.setRenderTarget(null);
   }
 
   function update(time: number, section: number, dt: number, flash = 0) {
@@ -146,5 +181,5 @@ export function createAurora(opts: { light: boolean }) {
     });
   }
 
-  return { object: mesh, update, setTheme, resize };
+  return { object: mesh, update, render, setTheme, resize };
 }

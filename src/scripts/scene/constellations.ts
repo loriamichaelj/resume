@@ -216,6 +216,8 @@ export function createConstellations(opts: { span: number }) {
   });
 
   // Spread down the column, alternating sides, out in the margins.
+  const mats = [...starMats, ...lineMats];
+
   function layout(camera: THREE.PerspectiveCamera) {
     const tanHalf = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
     const narrow = camera.aspect < 0.9;
@@ -233,7 +235,7 @@ export function createConstellations(opts: { span: number }) {
 
   function update(time: number, opacity: number) {
     group.visible = opacity > 0.01;
-    for (const m of [...starMats, ...lineMats]) {
+    for (const m of mats) {
       m.uniforms.uTime.value = time;
       m.uniforms.uOpacity.value = opacity;
     }

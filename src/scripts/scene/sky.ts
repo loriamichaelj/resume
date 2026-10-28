@@ -186,7 +186,7 @@ export function createSky(opts: { light: boolean }) {
     transparent: true,
     depthWrite: false,
   });
-  const moon = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 48), moonMat);
+  const moon = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 28), moonMat);
   moon.rotation.set(0.2, -0.4, 0.1);
   moon.renderOrder = -50;
   const halo = (scale: number, opacity: number, color: string) => {
