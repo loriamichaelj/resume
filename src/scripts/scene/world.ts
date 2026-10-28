@@ -8,7 +8,7 @@ import { createSky } from "./sky";
 import { createConstellations } from "./constellations";
 import { createSkyClouds } from "./skyclouds";
 import { clamp, damp } from "./util";
-import { applyQuality, LEVELS, savedLevel, type Quality } from "./quality";
+import { applyQuality, savedLevel, type Quality } from "./quality";
 import { onFrame } from "../ticker";
 
 // How far (world units) the background column travels over the full page
@@ -39,7 +39,8 @@ export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
   // where this device settled last time, else at its tier's default.
   const dpr = window.devicePixelRatio || 1;
   let level = clamp(savedLevel(quality) ?? quality.start, 0, quality.max);
-  const ratioAt = (l: number) => Math.min(dpr, LEVELS[l].ratio);
+  const levels = quality.levels;
+  const ratioAt = (l: number) => Math.min(dpr, levels[l].ratio);
   renderer.setPixelRatio(ratioAt(level));
   applyQuality(quality, level);
 
@@ -144,7 +145,7 @@ export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
     height = canvas.clientHeight || window.innerHeight;
     renderer.setSize(width, height, false);
     renderer.getDrawingBufferSize(drawing);
-    cloud.setResolution(drawing.x, drawing.y, LEVELS[level].cloud);
+    cloud.setResolution(drawing.x, drawing.y, levels[level].cloud);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     const px = height * renderer.getPixelRatio();
@@ -307,7 +308,7 @@ export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
   let capped = false; // frames are long whatever the resolution
   let trial: { from: number; before: number; time: number; sum: number; frames: number } | null = null;
   const TRIAL = { settle: 0.5, length: 1.5 }; // seconds
-  const sameRung = (a: number, b: number) => ratioAt(a) === ratioAt(b) && LEVELS[a].cloud === LEVELS[b].cloud;
+  const sameRung = (a: number, b: number) => ratioAt(a) === ratioAt(b) && levels[a].cloud === levels[b].cloud;
   function setLevel(next: number) {
     // Skip rungs that change nothing on this screen (ratios above its own).
     const dir = Math.sign(next - level);
