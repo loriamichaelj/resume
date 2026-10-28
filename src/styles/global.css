@@ -142,8 +142,7 @@
 
   .orb-label {
     @apply absolute left-0 top-0 flex items-center gap-2 rounded-full border border-white/20 bg-ink-950/80 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-white/90;
-    opacity: 0;
-    transition: opacity 0.4s ease;
+    opacity: 0; /* eased by the scene each frame: a transition would restart on every write */
     will-change: transform, opacity;
   }
   /* Health bar: three segments that empty as lightning hits the saucer. */

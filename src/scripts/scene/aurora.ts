@@ -153,15 +153,25 @@ export function createAurora(opts: { light: boolean }) {
   function setTheme(light: boolean) {
     intensity = light ? 0.5 : 0.3;
     sections = light ? LIGHT_SECTIONS : DARK_SECTIONS;
+    stale = true;
   }
 
   function resize(w: number, h: number) {
     uniforms.uRes.value.set(w, h);
     buffer.setSize(Math.max(2, Math.round(w * SCALE)), Math.max(2, Math.round(h * SCALE)));
+    stale = true;
   }
 
-  // Before the main render: paint the gradients into the small buffer.
+  // Before the main render: paint the gradients into the small buffer. They
+  // drift over tens of seconds, so one frame in three is plenty (each pass on
+  // another target costs a phone's tiled GPU a flush); a lightning flash, a
+  // resize or a theme change repaints at once.
+  let stale = true;
+  let skipped = 0;
   function render(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
+    if (!stale && uniforms.uFlash.value < 0.01 && ++skipped < 3) return;
+    stale = false;
+    skipped = 0;
     renderer.setRenderTarget(buffer);
     renderer.render(source, camera);
     renderer.setRenderTarget(null);
