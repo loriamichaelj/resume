@@ -700,6 +700,596 @@
   }
 
   /* ---------------------------------------------------------------------------
+     Landscape (src/components/Landscape.astro): the horizon above the footer,
+     behind the contact card. A night city in the dark theme, a lake among
+     mountains and pine forest at sunset in the light one. The footer is the
+     ground it stands on, so it takes the colour of the nearest layer.
+     ------------------------------------------------------------------------ */
+  .site-footer {
+    --ground: 2 5 13;
+    --footer-alpha: 0.5;
+    background: rgb(var(--ground));
+    transition: background-color 0.8s ease;
+  }
+  :root.light .site-footer {
+    --ground: 44 74 46;
+    --c-fg: 255 237 213; /* cream text on the dark forest floor */
+    --footer-alpha: 0.75;
+  }
+  .footer-text {
+    color: rgb(var(--c-fg) / var(--footer-alpha));
+  }
+  .footer-link:hover {
+    color: rgb(var(--c-fg));
+  }
+
+  /* z-index -1: in front of the WebGL sky, behind the contact card. It
+     overlaps the footer by a pixel (which covers it) so no seam shows. A size
+     container, so the traffic can be placed in the scene's own units. */
+  .landscape {
+    position: absolute;
+    inset-inline: 0;
+    bottom: calc(100% - 1px);
+    z-index: -1;
+    height: clamp(16rem, 32vw, 32rem);
+    overflow: hidden;
+    pointer-events: none;
+    container-type: size;
+  }
+  .landscape-scene {
+    position: absolute;
+    inset: 0;
+    /* One unit of the 2400 x 400 scene in CSS pixels: the SVGs scale to fill
+       the band's height, or its width when that is wider ("slice"). */
+    --u: max(100cqw / 2400, 100cqh / 400);
+    transition:
+      opacity 0.8s ease,
+      visibility 0.8s;
+  }
+  .landscape-day,
+  :root.light .landscape-night {
+    opacity: 0;
+    visibility: hidden;
+  }
+  :root.light .landscape-day {
+    opacity: 1;
+    visibility: visible;
+  }
+  /* Haze on the horizon: city light by night, the low sun by day. */
+  .landscape-glow {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(120% 80% at 50% 100%, rgb(77 124 255 / 0.42), rgb(77 124 255 / 0.12) 55%, transparent 85%);
+  }
+  /* By day the light comes from the sun up to the right. */
+  .landscape-day .landscape-glow {
+    background:
+      radial-gradient(70% 110% at 100% 0%, rgb(255 222 176 / 0.6), rgb(255 190 130 / 0.18) 50%, transparent 75%),
+      radial-gradient(120% 60% at 50% 100%, rgb(255 196 140 / 0.3), transparent 70%);
+  }
+  /* City light caught in the air between the rows of buildings. */
+  .landscape-haze {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgb(77 124 255 / 0.2), rgb(77 124 255 / 0.05) 30%, transparent 55%);
+  }
+  .landscape-haze-near {
+    background: linear-gradient(to top, rgb(77 124 255 / 0.14), transparent 30%);
+  }
+  .landscape-layer,
+  .landscape-lights,
+  .landscape-lights > svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  /* The lights come on after the buildings rise: a fade, no movement. */
+  .reveal[data-reveal="lights"] {
+    transform: none;
+    transition-duration: 1.4s;
+  }
+
+  /* Night: farther buildings are bluer and hazier, nearer ones near black. */
+  .city-0 {
+    fill: #17265a;
+  }
+  .city-1 {
+    fill: #0c1636;
+  }
+  .city-2 {
+    fill: rgb(2 5 13);
+  }
+  .city-lattice {
+    fill: none;
+    stroke: rgb(2 5 13);
+    stroke-width: 1.2;
+  }
+  .city-crown {
+    fill: #9ab8ff;
+    opacity: 0.75;
+  }
+  .city-strips {
+    fill: #7aa2ff;
+    opacity: 0.2;
+  }
+  .city-sign {
+    opacity: 0.9;
+  }
+  .city-lamp {
+    fill: #ffd58a;
+  }
+  .windows-0 {
+    opacity: 0.35;
+  }
+  .windows-1 {
+    opacity: 0.6;
+  }
+  .windows-2 {
+    opacity: 0.85;
+  }
+
+  /* Day: blue haze on the far range, sage-green slopes nearer, a blue lake,
+     green forest down to the forest floor, all in warm afternoon light. */
+  .nature-0 {
+    fill: #c4cadb;
+  }
+  .nature-1 {
+    fill: #93b088;
+  }
+  .nature-3 {
+    fill: rgb(44 74 46);
+  }
+  .nature-rim {
+    fill: none;
+    stroke: #fff3e2;
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+    opacity: 0.45;
+  }
+  .nature-lit {
+    fill: #4d7a45;
+  }
+  .nature-shore {
+    fill: #5f8f5a;
+  }
+  .nature-reflection {
+    opacity: 0.3;
+  }
+  .nature-snow {
+    fill: #fbfaf7;
+  }
+  .nature-snow-shade {
+    fill: #d9deea;
+  }
+  .nature-forest {
+    fill: #86ab79;
+  }
+  .nature-wood {
+    fill: #6b4426;
+  }
+  .nature-wood-lit {
+    fill: #8c5a33;
+  }
+  .nature-rod {
+    fill: none;
+    stroke: #3d2a1c;
+    stroke-width: 1.2;
+    stroke-linecap: round;
+  }
+  .nature-line {
+    fill: none;
+    stroke: #3d2a1c;
+    stroke-width: 0.6;
+    opacity: 0.8;
+  }
+  .nature-rock {
+    fill: #6d6b62;
+  }
+  .nature-reeds {
+    fill: none;
+    stroke: rgb(44 74 46);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+  }
+  .nature-dock {
+    fill: #4a3220;
+  }
+  .nature-hull {
+    fill: #a63d22;
+  }
+  .nature-sail {
+    fill: #fff3e6;
+  }
+  .nature-sail-jib {
+    fill: #fcdcbc;
+  }
+
+  /* ---- Motion -------------------------------------------------------------
+     Each moving part is its own element and only its opacity or position
+     changes, so the GPU moves it without repainting anything. Paused unless
+     the landscape is on screen (.is-live, motion.ts) and its theme is showing. */
+  .twinkle-0,
+  .twinkle-1,
+  .twinkle-2 {
+    will-change: opacity;
+  }
+  .twinkle-0 {
+    animation: land-twinkle 3.7s ease-in-out infinite;
+  }
+  .twinkle-1 {
+    animation: land-twinkle 5.3s ease-in-out -1.9s infinite;
+  }
+  .twinkle-2 {
+    animation: land-twinkle 7.1s ease-in-out -4.2s infinite;
+  }
+  @keyframes land-twinkle {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    35% {
+      opacity: 0.2;
+    }
+    45% {
+      opacity: 0.95;
+    }
+    70% {
+      opacity: 0.55;
+    }
+  }
+  /* Small things placed at a point (--x, --y) of the scene, --size units
+     across: beacons and the Ferris wheel by night; sparkles, ducks and chimney
+     smoke by day. Each has its own timing (set inline). */
+  .land-point {
+    position: absolute;
+    left: calc(50% + (var(--x) - 1200) * var(--u));
+    bottom: calc((400 - var(--y)) * var(--u));
+    width: calc(var(--size) * var(--u));
+    height: calc(var(--size) * var(--u));
+    margin: 0 0 calc(var(--size) * var(--u) / -2) calc(var(--size) * var(--u) / -2);
+  }
+  /* Aviation lights: a short flash, then dim. */
+  .beacon {
+    border-radius: 9999px;
+    background: radial-gradient(circle, #ff6b74 0 18%, rgb(255 77 90 / 0.3) 26%, transparent 68%);
+    will-change: opacity;
+    animation: land-beacon 2.4s linear infinite;
+  }
+  @keyframes land-beacon {
+    0%,
+    16% {
+      opacity: 1;
+    }
+    28%,
+    100% {
+      opacity: 0.15;
+    }
+  }
+  /* Cars: a streak of light along the road, on the scene's own scale. */
+  .car {
+    position: absolute;
+    left: 0;
+    width: calc(var(--u) * 14);
+    height: calc(var(--u) * 1.6);
+    border-radius: 9999px;
+    will-change: transform;
+    animation: land-drive 14s linear infinite;
+  }
+  .car-toward {
+    bottom: calc(var(--u) * 6);
+    background: linear-gradient(90deg, transparent, rgb(255 244 214 / 0.5) 45%, #fff6e0);
+    box-shadow: calc(var(--u) * 6) 0 calc(var(--u) * 4) rgb(255 240 200 / 0.55);
+  }
+  .car-away {
+    bottom: calc(var(--u) * 2.2);
+    background: linear-gradient(270deg, transparent, rgb(255 77 90 / 0.5) 45%, #ff5a64);
+    box-shadow: calc(var(--u) * -6) 0 calc(var(--u) * 4) rgb(255 77 90 / 0.5);
+    animation-name: land-drive-back;
+  }
+  @keyframes land-drive {
+    from {
+      transform: translate3d(-5cqw, 0, 0);
+    }
+    to {
+      transform: translate3d(105cqw, 0, 0);
+    }
+  }
+  @keyframes land-drive-back {
+    from {
+      transform: translate3d(105cqw, 0, 0);
+    }
+    to {
+      transform: translate3d(-5cqw, 0, 0);
+    }
+  }
+  @supports not (width: 1cqw) {
+    .car {
+      display: none;
+    }
+  }
+  /* Sparkles on the water: a small four-pointed glint that catches the
+     light, turns and fades, then waits for its next turn. */
+  .sparkle {
+    opacity: 0;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 0C12.8 9 15 11.2 24 12C15 12.8 12.8 15 12 24C11.2 15 9 12.8 0 12C9 11.2 11.2 9 12 0Z' fill='%23fffaf0'/%3E%3C/svg%3E")
+        center / 70% no-repeat,
+      radial-gradient(circle, rgb(255 250 238 / 0.8) 0 5%, rgb(255 236 205 / 0.3) 14%, transparent 34%);
+    will-change: transform, opacity;
+    animation: land-sparkle 5s ease-out infinite;
+  }
+  @keyframes land-sparkle {
+    0% {
+      opacity: 0;
+      transform: scale(0.3) rotate(0deg);
+    }
+    9% {
+      opacity: 0.65;
+      transform: scale(1) rotate(25deg);
+    }
+    20%,
+    100% {
+      opacity: 0;
+      transform: scale(0.4) rotate(50deg);
+    }
+  }
+  .boat {
+    will-change: transform;
+  }
+  .boat {
+    animation: land-sail 40s ease-in-out infinite;
+  }
+  @keyframes land-sail {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+    50% {
+      transform: translate3d(calc(var(--u) * -70), 0, 0);
+    }
+  }
+  /* Birds cross the sky left to right, climbing a little. Inside, a gentle
+     bob, and two wing poses (up and down) that alternate: a couple of beats,
+     then a glide. The flock shares one path, each bird offset by --dx. */
+  .bird {
+    position: absolute;
+    left: 0;
+    margin-left: calc(var(--dx) * var(--u));
+    bottom: calc((400 - var(--y)) * var(--u));
+    width: calc(var(--size) * var(--u));
+    height: calc(var(--size) * var(--u) * 0.5);
+    will-change: transform;
+    animation: land-fly 50s linear infinite;
+  }
+  .bird-bob {
+    position: absolute;
+    inset: 0;
+    will-change: transform;
+    animation: land-bob 3s ease-in-out infinite alternate;
+  }
+  .bird-up,
+  .bird-down {
+    position: absolute;
+    inset: 0;
+    background: center / contain no-repeat;
+    will-change: opacity;
+    animation: land-wings-up 2s steps(1, end) infinite;
+  }
+  .bird-up {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 8'%3E%3Cpath d='M1 1.5Q4.5 2.5 8 6Q11.5 2.5 15 1.5' fill='none' stroke='%235d4a3e' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+  .bird-down {
+    opacity: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 8'%3E%3Cpath d='M1 6.5Q4.5 3 8 4.5Q11.5 3 15 6.5' fill='none' stroke='%235d4a3e' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    animation-name: land-wings-down;
+  }
+  @keyframes land-fly {
+    from {
+      transform: translate3d(-8cqw, 0, 0);
+    }
+    to {
+      transform: translate3d(108cqw, calc(var(--u) * -14), 0);
+    }
+  }
+  @keyframes land-bob {
+    from {
+      transform: translate3d(0, calc(var(--u) * -2.5), 0);
+    }
+    to {
+      transform: translate3d(0, calc(var(--u) * 2.5), 0);
+    }
+  }
+  @keyframes land-wings-up {
+    0%,
+    20%,
+    40% {
+      opacity: 1;
+    }
+    10%,
+    30% {
+      opacity: 0;
+    }
+    50%,
+    100% {
+      opacity: 1;
+    }
+  }
+  @keyframes land-wings-down {
+    0%,
+    20%,
+    40% {
+      opacity: 0;
+    }
+    10%,
+    30% {
+      opacity: 1;
+    }
+    50%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  /* Ducks paddle across the cove and back, turning round halfway. */
+  .duck {
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 12'%3E%3Cpath d='M15 9.5L31 6M15 10.5L31 11.5' fill='none' stroke='%23ffffff' stroke-opacity='0.75' stroke-width='0.7'/%3E%3Cpath d='M4 8Q4 4.5 9 5L13 5Q16.5 5 15.5 9Q10 11 4 8Z' fill='%236b5040'/%3E%3Ccircle cx='5' cy='3.8' r='2.1' fill='%232f6b3a'/%3E%3Cpath d='M3.1 3.6L0.6 4.3L3.1 4.8Z' fill='%23e0a03c'/%3E%3C/svg%3E") center / contain no-repeat;
+    will-change: transform;
+    animation: land-paddle 80s linear infinite;
+  }
+  @keyframes land-paddle {
+    0% {
+      transform: translate3d(0, 0, 0) scaleX(1);
+    }
+    49.9% {
+      transform: translate3d(calc(var(--u) * -150), 0, 0) scaleX(1);
+    }
+    50% {
+      transform: translate3d(calc(var(--u) * -150), 0, 0) scaleX(-1);
+    }
+    99.9% {
+      transform: translate3d(0, 0, 0) scaleX(-1);
+    }
+    100% {
+      transform: translate3d(0, 0, 0) scaleX(1);
+    }
+  }
+  /* Rings spreading on the water from the fishing float. */
+  .ripple {
+    height: calc(var(--size) * var(--u) * 0.3);
+    margin-bottom: calc(var(--size) * var(--u) * -0.15);
+    border: 1px solid rgb(255 246 234 / 0.8);
+    border-radius: 50%;
+    opacity: 0;
+    will-change: transform, opacity;
+    animation: land-ripple 3.6s ease-out infinite;
+  }
+  @keyframes land-ripple {
+    0% {
+      opacity: 0.8;
+      transform: scale(0.15);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1);
+    }
+  }
+  /* Chimney smoke: puffs that rise, drift left, swell and fade. */
+  .smoke {
+    opacity: 0;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgb(255 246 236 / 0.8), rgb(255 240 225 / 0.35) 45%, transparent 70%);
+    will-change: transform, opacity;
+    animation: land-smoke 7s ease-out infinite;
+  }
+  @keyframes land-smoke {
+    0% {
+      opacity: 0;
+      transform: translate3d(0, 0, 0) scale(0.35);
+    }
+    15% {
+      opacity: 0.7;
+    }
+    100% {
+      opacity: 0;
+      transform: translate3d(calc(var(--u) * -16), calc(var(--u) * -42), 0) scale(1.9);
+    }
+  }
+
+  /* Night: the Ferris wheel's lights turn slowly. */
+  .wheel {
+    background-position: center;
+    background-size: contain;
+    background-repeat: no-repeat;
+    will-change: transform;
+    animation: land-spin 60s linear infinite;
+  }
+  @keyframes land-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  /* A train along the elevated line now and then, off to the right between
+     runs. */
+  .train {
+    position: absolute;
+    left: 0;
+    bottom: calc((400 - var(--y)) * var(--u));
+    width: calc(200 * var(--u));
+    height: calc(9 * var(--u));
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    will-change: transform;
+    animation: land-train 34s linear infinite;
+  }
+  @keyframes land-train {
+    0% {
+      transform: translate3d(calc(-200 * var(--u) - 2cqw), 0, 0);
+    }
+    45%,
+    100% {
+      transform: translate3d(105cqw, 0, 0);
+    }
+  }
+  /* A plane high up, crossing right to left, its red tail light blinking. */
+  .plane {
+    position: absolute;
+    left: 0;
+    bottom: calc((400 - var(--y)) * var(--u));
+    width: calc(5 * var(--u));
+    height: calc(5 * var(--u));
+    border-radius: 9999px;
+    background: radial-gradient(circle, #fff 0 22%, rgb(220 230 255 / 0.35) 40%, transparent 70%);
+    will-change: transform;
+    animation: land-plane 90s linear infinite;
+  }
+  .plane i {
+    position: absolute;
+    top: 0;
+    left: 160%;
+    width: 100%;
+    height: 100%;
+    border-radius: 9999px;
+    background: radial-gradient(circle, #ff5a64 0 22%, rgb(255 77 90 / 0.35) 40%, transparent 70%);
+    will-change: opacity;
+    animation: land-beacon 1.3s linear infinite;
+  }
+  @keyframes land-plane {
+    from {
+      transform: translate3d(105cqw, 0, 0);
+    }
+    to {
+      transform: translate3d(-5cqw, calc(var(--u) * -6), 0);
+    }
+  }
+  @supports not (width: 1cqw) {
+    .train,
+    .plane,
+    .bird {
+      display: none;
+    }
+  }
+
+  /* Written without :not(.light): Tailwind derives an !important copy of
+     component rules that mention .light, and in a :not() that copy would
+     match everything. */
+  .landscape .anim {
+    animation-play-state: paused;
+  }
+  .landscape.is-live .landscape-night .anim,
+  :root.light .landscape.is-live .landscape-day .anim {
+    animation-play-state: running;
+  }
+  :root.light .landscape.is-live .landscape-night .anim {
+    animation-play-state: paused;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .landscape .anim {
+      animation: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------------------
      Skill and service cards: clicking one opens it as a large floating card
      (src/scripts/expand-card.ts). The panel is revealed with an animated
      clip-path that starts at the card's own rectangle.

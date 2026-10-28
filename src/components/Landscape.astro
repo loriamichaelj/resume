@@ -1,0 +1,676 @@
+---
+// The horizon above the footer: a night city in the dark theme, a blue lake
+// among mountains and green forest in the afternoon sun in the light one. The footer below is the
+// ground it stands on.
+//
+// Everything is generated here at build time from a seeded random number
+// generator and shipped as static SVG. Every layer shares one wide coordinate
+// space (W x H, scaled to fill the band by height, "slice"), so the layers line
+// up and a phone simply shows a cropped, larger middle slice.
+//
+// What moves (twinkling windows, flashing beacons, traffic, the Ferris wheel,
+// a train and a plane by night; sparkles on the water, the boat, ducks, birds
+// and chimney smoke by day) sits on its own element and only changes opacity
+// or position, which the browser animates on the GPU without repainting the
+// scene (global.css). It only runs while the landscape is on screen (motion.ts).
+
+import { mulberry32 } from "../scripts/scene/random";
+
+const W = 2400;
+const H = 400;
+const n = (v: number) => Math.round(v * 10) / 10;
+const box = (x0: number, y0: number, x1: number, y1: number) => `M${n(x0)} ${n(y0)}H${n(x1)}V${n(y1)}H${n(x0)}Z`;
+type Rect = [number, number, number, number]; // x0, y0, x1, y1
+const overlaps = (a: Rect, b: Rect) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+
+// ---- Night: city -----------------------------------------------------------------
+
+type CityOpts = {
+  seed: number;
+  depth: 0 | 1 | 2; // far, mid, near: nearer layers get more rooftop detail
+  floor: [number, number]; // building heights, min and max
+  width: [number, number]; // building widths, min and max
+  lit: number; // share of windows with the lights on
+  win: [number, number]; // window width and height
+  gap: [number, number]; // space between windows, across and down
+};
+type Win = { r: Rect; tone: number };
+
+// A gap in the nearest row of buildings, for a Ferris wheel.
+const PARK = [1362, 1498];
+const WHEEL = { x: 1430, y: 330, r: 50 };
+
+// Window colours: cool white, electric blue, warm. Neon signs: pink, ice, blue.
+const WINDOW_COLORS = ["#eef3ff", "#9ab8ff", "#ffd58a"];
+const SIGN_COLORS = ["#ff5ea8", "#7dd3fc", "#4d7cff"];
+// Spelled out in full so Tailwind, which scans for class names, keeps their
+// styles (global.css) in the build.
+const CITY_CLASSES = ["city-0", "city-1", "city-2"];
+const WINDOW_CLASSES = ["windows-0", "windows-1", "windows-2"];
+const TWINKLE_CLASSES = ["twinkle-0", "twinkle-1", "twinkle-2"];
+
+function city(o: CityOpts) {
+  const rand = mulberry32(o.seed);
+  let body = ""; // the silhouette
+  let lattice = ""; // thin stroked lines: crane cables and bracing
+  let crowns = ""; // lit bands near the tops of towers
+  let strips = ""; // glass towers: lit vertical mullions
+  const signs: { d: string; color: string }[] = [];
+  const solids: Rect[] = []; // for hiding windows of farther layers
+  const windows: Win[] = [];
+  const beacons: [number, number][] = [];
+  let craned = false;
+
+  for (let x = -20; x < W + 20; ) {
+    const w = o.width[0] + rand() * (o.width[1] - o.width[0]);
+    if (o.depth === 2 && x + w > PARK[0] && x < PARK[1]) {
+      x = PARK[1]; // leave the park open for the Ferris wheel
+      continue;
+    }
+    const tower = rand() < 0.14;
+    const bh = Math.min(H * 0.7, (o.floor[0] + rand() ** 1.5 * (o.floor[1] - o.floor[0])) * (tower ? 1.35 : 1));
+    const top = H - bh;
+    const cx = x + w / 2;
+    body += box(x, top, x + w, H);
+    solids.push([x, top, x + w, H]);
+
+    if (tower) {
+      // A setback crown, often lit, then a spire or a mast.
+      const inset = w * (0.14 + rand() * 0.12);
+      const step = 10 + rand() * 20;
+      const roof = top - step;
+      body += box(x + inset, roof, x + w - inset, top);
+      solids.push([x + inset, roof, x + w - inset, top]);
+      if (o.depth > 0 && rand() < 0.6) crowns += box(x + inset + 2, roof + 3, x + w - inset - 2, roof + 5);
+      if (rand() < 0.45) {
+        const spire = Math.min(28 + rand() * 40, roof - 12);
+        const half = (w - 2 * inset) * 0.18;
+        body += `M${n(cx - half)} ${n(roof)}L${n(cx)} ${n(roof - spire)}L${n(cx + half)} ${n(roof)}Z`;
+        if (o.depth > 0) beacons.push([cx, roof - spire]);
+      } else {
+        const mast = Math.min(18 + rand() * 34, roof - 12);
+        body += box(cx - 1, roof - mast, cx + 1, roof);
+        if (o.depth > 0) beacons.push([cx, roof - mast]);
+      }
+    } else if (o.depth === 2 && !craned && x <= 1060 && x + w >= 1060 && bh < 130) {
+      // One building under construction, with a tower crane.
+      craned = true;
+      const mx = x + w * 0.35;
+      const mh = 96;
+      body += box(mx - 2, top - mh, mx + 2, top); // mast
+      body += box(mx - 34, top - mh - 3, mx + 120, top - mh); // jib and counter-jib
+      body += box(mx - 34, top - mh, mx - 20, top - mh + 8); // counterweight
+      body += `M${n(mx - 3)} ${n(top - mh - 3)}L${n(mx)} ${n(top - mh - 18)}L${n(mx + 3)} ${n(top - mh - 3)}Z`;
+      body += box(mx + 77, top - mh + 40, mx + 83, top - mh + 45); // hook block
+      lattice += `M${n(mx)} ${n(top - mh - 18)}L${n(mx + 118)} ${n(top - mh - 3)}M${n(mx)} ${n(top - mh - 18)}L${n(mx - 32)} ${n(top - mh - 3)}`;
+      lattice += `M${n(mx + 80)} ${n(top - mh)}V${n(top - mh + 40)}`;
+      for (let y = top; y > top - mh + 8; y -= 8) lattice += `M${n(mx - 2)} ${n(y)}L${n(mx + 2)} ${n(y - 8)}`;
+      beacons.push([mx, top - mh - 18], [mx + 118, top - mh - 3]);
+    } else {
+      const roof = rand();
+      if (roof < 0.22) {
+        // A setback storey.
+        const inset = w * (0.15 + rand() * 0.15);
+        const step = 8 + rand() * 18;
+        body += box(x + inset, top - step, x + w - inset, top);
+        solids.push([x + inset, top - step, x + w - inset, top]);
+      } else if (roof < 0.34) {
+        const rise = 6 + rand() * 16;
+        body += rand() < 0.5 ? `M${n(x)} ${n(top)}L${n(x + w)} ${n(top - rise)}V${n(top)}Z` : `M${n(x)} ${n(top - rise)}L${n(x + w)} ${n(top)}H${n(x)}Z`;
+      } else if (roof < 0.5 && o.depth > 0 && w > 44) {
+        // A water tower: legs, tank, conical cap.
+        const tx = x + w * (0.25 + rand() * 0.5);
+        body += box(tx - 9, top - 10, tx - 7, top) + box(tx + 7, top - 10, tx + 9, top);
+        body += box(tx - 11, top - 28, tx + 11, top - 10);
+        body += `M${n(tx - 12)} ${n(top - 28)}L${n(tx)} ${n(top - 37)}L${n(tx + 12)} ${n(top - 28)}Z`;
+      } else if (roof < 0.66 && o.depth === 2) {
+        // Plant on the roof.
+        for (let k = 0, ax = x + 6 + rand() * 10; k < 3 && ax < x + w - 16; k++) {
+          const aw = 8 + rand() * 8;
+          body += box(ax, top - 5 - rand() * 4, ax + aw, top);
+          ax += aw + 4 + rand() * 12;
+        }
+      } else if (roof < 0.74 && o.depth === 2 && w > 60) {
+        // A neon sign on posts.
+        const sw = Math.min(w - 16, 34 + rand() * 20);
+        const sx = x + (w - sw) / 2;
+        body += box(sx + 4, top - 8, sx + 6, top) + box(sx + sw - 6, top - 8, sx + sw - 4, top);
+        signs.push({ d: box(sx, top - 22, sx + sw, top - 8), color: SIGN_COLORS[Math.floor(rand() * SIGN_COLORS.length)] });
+      }
+    }
+
+    if (o.depth > 0 && rand() < 0.16) {
+      // A glass tower: lit mullions instead of a grid of windows.
+      for (let sx = x + 5; sx < x + w - 6; sx += 6) if (rand() < 0.55) strips += box(sx, top + 6, sx + 2, H);
+    } else {
+      // Windows on a grid, centred on the facade. Some buildings are dark,
+      // each has its own share of lit rooms and a dominant colour.
+      const [ww, wh] = o.win;
+      const [gx, gy] = o.gap;
+      const cols = Math.floor((w - 10 + gx) / (ww + gx));
+      const rows = Math.floor((bh - 12 + gy) / (wh + gy));
+      const left = x + (w - (cols * (ww + gx) - gx)) / 2;
+      const busy = rand() < 0.15 ? 0 : o.lit * (0.4 + rand() * 1.2);
+      const pick = rand();
+      const tone = pick < 0.55 ? 0 : pick < 0.85 ? 1 : 2;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (rand() > busy) continue;
+          const wx = left + c * (ww + gx);
+          const wy = top + 8 + r * (wh + gy);
+          windows.push({ r: [wx, wy, wx + ww, wy + wh], tone: rand() < 0.8 ? tone : Math.floor(rand() * 3) });
+        }
+      }
+    }
+
+    x += w + (rand() < 0.3 ? 2 + rand() * 8 : 0);
+  }
+  return { body, lattice, crowns, strips, signs, solids, windows, beacons };
+}
+
+const cityLayers = [
+  city({ seed: 5, depth: 0, floor: [110, 280], width: [30, 80], lit: 0.12, win: [2, 3], gap: [5, 5] }),
+  city({ seed: 17, depth: 1, floor: [60, 215], width: [44, 105], lit: 0.18, win: [3, 4], gap: [6, 7] }),
+  city({ seed: 29, depth: 2, floor: [34, 150], width: [44, 118], lit: 0.2, win: [4, 5], gap: [7, 9] }),
+];
+
+// Street level, in front of the nearest buildings: the road with its lamps,
+// an elevated railway on pillars, and the Ferris wheel's frame.
+const ROAD = 388;
+const RAIL = 362; // top of the railway deck
+let lamps = "";
+let street = box(0, ROAD, W, H) + box(0, RAIL, W, RAIL + 3);
+const front: Rect[] = [[0, RAIL, W, RAIL + 3]];
+for (let x = 30; x < W; x += 92) {
+  street += box(x, ROAD - 16, x + 1.5, ROAD) + box(x, ROAD - 16, x + 6, ROAD - 15);
+  lamps += `M${n(x + 6)} ${n(ROAD - 14.5)}h1.6v1.6h-1.6z`;
+}
+for (let x = 12; x < W; x += 64) {
+  street += box(x, RAIL + 3, x + 3, ROAD);
+  front.push([x, RAIL + 3, x + 3, ROAD]);
+}
+street += `M${WHEEL.x - 2} ${WHEEL.y}L${PARK[0] + 28} ${ROAD}H${PARK[0] + 34}L${WHEEL.x + 2} ${WHEEL.y}Z`;
+street += `M${WHEEL.x - 2} ${WHEEL.y}L${PARK[1] - 34} ${ROAD}H${PARK[1] - 28}L${WHEEL.x + 2} ${WHEEL.y}Z`;
+street += box(PARK[0] + 18, ROAD - 4, PARK[1] - 18, ROAD);
+
+// The Ferris wheel's rim, spokes and gondola lights, drawn as one image that
+// turns slowly (global.css).
+const WHEEL_COLORS = ["#ff5ea8", "#7dd3fc", "#ffd58a", "#9ab8ff"];
+let wheel = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='-56 -56 112 112'><g fill='none' stroke='#9ab8ff'>`;
+wheel += `<circle r='${WHEEL.r}' stroke-opacity='0.55' stroke-width='1.2'/><circle r='${WHEEL.r - 6}' stroke-opacity='0.25' stroke-width='0.8'/>`;
+for (let k = 0; k < 16; k++) {
+  const a = (k / 16) * Math.PI * 2;
+  wheel += `<path d='M0 0L${n(Math.cos(a) * WHEEL.r)} ${n(Math.sin(a) * WHEEL.r)}' stroke-opacity='0.28' stroke-width='0.7'/>`;
+}
+wheel += `</g>`;
+for (let k = 0; k < 16; k++) {
+  const a = (k / 16) * Math.PI * 2 + Math.PI / 16;
+  const [cx, cy] = [n(Math.cos(a) * WHEEL.r), n(Math.sin(a) * WHEEL.r)];
+  const c = WHEEL_COLORS[k % WHEEL_COLORS.length];
+  wheel += `<circle cx='${cx}' cy='${cy}' r='4.5' fill='${c}' opacity='0.3'/><circle cx='${cx}' cy='${cy}' r='2' fill='${c}'/>`;
+}
+wheel += `<circle r='3' fill='#9ab8ff'/></svg>`;
+const wheelImage = `background-image: url("data:image/svg+xml,${encodeURIComponent(wheel)}")`;
+
+// The train: four lit carriages.
+let train = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 9'>`;
+for (let c = 0; c < 4; c++) {
+  const x0 = c * 50;
+  train += `<rect x='${x0}' y='0' width='48' height='9' rx='1.5' fill='#070c1c'/>`;
+  for (let k = 0; k < 7; k++) train += `<rect x='${x0 + 3 + k * 6.4}' y='2' width='4' height='3.2' fill='${(c + k) % 5 ? "#ffe4a8" : "#dfe8ff"}' opacity='0.9'/>`;
+}
+train += `<rect x='196' y='2.5' width='4' height='2.5' fill='#fff6e0'/></svg>`;
+const trainImage = `background-image: url("data:image/svg+xml,${encodeURIComponent(train)}")`;
+
+// All lit windows go on a few shared layers in front of every building, so
+// drop the ones a nearer building would cover. Most stay steady; about a
+// sixth twinkle, split across three layers with different rhythms.
+const twinkleRand = mulberry32(71);
+const steady: string[][] = cityLayers.map(() => ["", "", ""]);
+const twinkle: string[][][] = [0, 1, 2].map(() => cityLayers.map(() => ["", "", ""]));
+cityLayers.forEach((layer, i) => {
+  const nearer = [...cityLayers.slice(i + 1).flatMap((l) => l.solids), ...front];
+  for (const { r, tone } of layer.windows) {
+    if (nearer.some((s) => overlaps(r, s))) continue;
+    const d = box(r[0], r[1], r[2], r[3]);
+    const roll = twinkleRand();
+    if (roll < 0.17) twinkle[Math.floor(roll * 18) % 3][i][tone] += d;
+    else steady[i][tone] += d;
+  }
+});
+// Aviation lights, each flashing on its own rhythm.
+const beaconRand = mulberry32(73);
+const beacons = cityLayers.flatMap((l, i) =>
+  l.beacons.map(([x, y]) => ({ x, y, size: i === 2 ? 16 : 12, dur: 1.6 + beaconRand() * 2, delay: -beaconRand() * 4 })),
+);
+
+// Traffic on the road: headlights coming, tail lights going.
+const cars = [
+  { lane: "toward", dur: 13, delay: -2 },
+  { lane: "toward", dur: 17, delay: -9 },
+  { lane: "toward", dur: 11, delay: -6.5 },
+  { lane: "away", dur: 15, delay: -4 },
+  { lane: "away", dur: 19, delay: -12 },
+  { lane: "away", dur: 12, delay: -8 },
+];
+
+// ---- Day: lake, mountains and forest -------------------------------------------
+// Lit from the upper right, where the sun sits in the sky above (the 3D scene):
+// the left face of each peak falls into shade, right-facing slopes catch a rim
+// of light, trees are lit on their right, and the water is brightest on the
+// right, where the sparkles gather.
+
+const WATER = 240; // the waterline
+const LIGHT_X = 1720; // under the sun, off to the right
+
+// A mountain ridge by midpoint displacement, rescaled so its highest peak
+// sits at `peak` and its lowest saddle at `saddle`.
+function ridge(seed: number, peak: number, saddle: number, rough: number, points = 128): [number, number][] {
+  const rand = mulberry32(seed);
+  const ys = new Array(points + 1).fill(0);
+  ys[0] = rand();
+  ys[points] = rand();
+  for (let step = points; step > 1; step /= 2) {
+    for (let i = step / 2; i < points; i += step) {
+      ys[i] = (ys[i - step / 2] + ys[i + step / 2]) / 2 + (rand() - 0.5) * (step / points) ** rough;
+    }
+  }
+  const lo = Math.min(...ys);
+  const hi = Math.max(...ys);
+  return ys.map((v, i) => [(i / points) * W, saddle - ((v - lo) / (hi - lo)) * (saddle - peak)]);
+}
+const line = (pts: [number, number][]) => pts.map(([x, y], i) => `${i ? "L" : "M"}${n(x)} ${n(y)}`).join("");
+// The mirror image in the water, a little foreshortened.
+const mirrored = (pts: [number, number][], k = 0.7) => pts.map(([x, y]): [number, number] => [x, WATER + (WATER - y) * k]);
+const circle = (cx: number, cy: number, r: number) =>
+  `M${n(cx - r)} ${n(cy)}a${n(r)} ${n(r)} 0 1 0 ${n(2 * r)} 0a${n(r)} ${n(r)} 0 1 0 ${n(-2 * r)} 0Z`;
+
+// Light and shade on a ridge lit from the right. Each peak's left face is in
+// shade: a facet from the ridge (valley up to peak) down to a kinked spine
+// running from the peak down and a little to the left, cut off level at the
+// bottom. It is filled with a gradient that fades toward the waterline and
+// softened with a blur, so it reads as form rather than a hard shape. Slopes
+// that fall away to the right get a rim of light. Sharp peaks higher than
+// `capAbove` carry a little snow, its left side in shade too.
+function relief(pts: [number, number][], seed: number, capAbove = 0) {
+  const rand = mulberry32(seed);
+  const peaks: number[] = [];
+  for (let i = 3; i < pts.length - 3; i++) {
+    if ([1, 2, 3].every((k) => pts[i][1] <= pts[i - k][1] && pts[i][1] < pts[i + k][1])) peaks.push(i);
+  }
+  let shade = "";
+  let cap = "";
+  let capShade = "";
+  let prev = 0;
+  for (const p of peaks) {
+    let v = prev;
+    for (let j = prev; j < p; j++) if (pts[j][1] > pts[v][1]) v = j;
+    const [px, py] = pts[p];
+    const [vx, vy] = pts[v];
+    const bottom = py + (WATER - py) * 0.8;
+    let spine = "";
+    for (let k = 1; k <= 5; k++) {
+      const y = py + ((bottom - py) * k) / 5;
+      spine += `L${n(px - (y - py) * 0.28 + (rand() - 0.5) * 10 * (k / 5))} ${n(y)}`;
+    }
+    if (bottom > vy) spine += `L${n(vx - (bottom - vy) * 0.28)} ${n(bottom)}`;
+    shade += `${line(pts.slice(v, p + 1))}${spine}Z`;
+
+    // Snow only on peaks that stand well clear of the ridge either side.
+    const sharp = Math.min(pts[p - 3][1], pts[p + 3][1]) - py > 14;
+    if (py < capAbove && sharp) {
+      const capDepth = 10 + (capAbove - py) * 0.25;
+      let i0 = p;
+      let i1 = p;
+      while (i0 > p - 4 && pts[i0 - 1][1] < py + capDepth) i0--;
+      while (i1 < p + 4 && pts[i1 + 1][1] < py + capDepth) i1++;
+      if (i1 - i0 >= 2) {
+        const x0 = pts[i0][0];
+        const x1 = pts[i1][0];
+        let edge = "";
+        for (let k = 1; k < 6; k++) edge += `L${n(x1 - ((x1 - x0) * k) / 6)} ${n(py + capDepth * (0.55 + rand() * 0.45))}`;
+        cap += `${line(pts.slice(i0, i1 + 1))}${edge}Z`;
+        capShade += `${line(pts.slice(i0, p + 1))}L${n(px - (px - x0) * 0.2)} ${n(py + capDepth * 0.5)}Z`;
+      }
+    }
+    prev = p;
+  }
+  let rim = "";
+  for (let i = 0; i < pts.length - 1; i++) {
+    if (pts[i + 1][1] > pts[i][1] + 0.5) rim += `M${n(pts[i][0])} ${n(pts[i][1])}L${n(pts[i + 1][0])} ${n(pts[i + 1][1])}`;
+  }
+  return { shade, rim, cap, capShade };
+}
+
+// A pine: three stacked tiers and a stub of trunk; `lit` is the sunward
+// (right) half of each tier. Small, distant ones are a single triangle (the
+// tiers wouldn't show). A negative height draws it upside down (a reflection).
+function pine(x: number, base: number, th: number) {
+  const size = Math.abs(th);
+  if (size < 24) {
+    const half = size * 0.22;
+    return {
+      d: `M${n(x)} ${n(base - th)}L${n(x + half)} ${n(base)}L${n(x - half)} ${n(base)}Z`,
+      lit: `M${n(x)} ${n(base - th)}L${n(x + half)} ${n(base)}L${n(x)} ${n(base)}Z`,
+    };
+  }
+  let d = "";
+  let lit = "";
+  for (let i = 0; i < 3; i++) {
+    const top = base - th + i * th * 0.24;
+    const bottom = top + th * (0.42 + i * 0.06);
+    const half = size * (0.15 + i * 0.07);
+    d += `M${n(x)} ${n(top)}L${n(x + half)} ${n(bottom)}L${n(x - half)} ${n(bottom)}Z`;
+    lit += `M${n(x)} ${n(top)}L${n(x + half)} ${n(bottom)}L${n(x)} ${n(bottom)}Z`;
+  }
+  d += box(x - size * 0.03, Math.min(base - th * 0.2, base + 3), x + size * 0.03, Math.max(base - th * 0.2, base + 3));
+  return { d, lit };
+}
+// A round, leafy tree: a trunk and a cluster of three crowns, lit on the right.
+function leafy(x: number, base: number, h: number) {
+  const r = h * 0.3;
+  const d =
+    box(x - 1.4, base - h * 0.4, x + 1.4, base + 3) +
+    circle(x, base - h + r, r) +
+    circle(x - r * 0.65, base - h * 0.55, r * 0.8) +
+    circle(x + r * 0.65, base - h * 0.5, r * 0.8);
+  const lit = circle(x + r * 0.35, base - h + r * 0.85, r * 0.55) + circle(x + r * 0.95, base - h * 0.52, r * 0.45);
+  return { d, lit };
+}
+
+const far = ridge(41, 48, 182, 0.75);
+const mid = ridge(43, 128, 222, 0.9);
+const farRelief = relief(far, 91, 105);
+const midRelief = relief(mid, 93);
+
+// The far shore: a low bank thick with small pines, a second, paler row of
+// forest behind it, and their reflection.
+const shoreRand = mulberry32(47);
+const bank = (x: number) => WATER - 3 - (Math.sin(x * 0.004 + 1.3) * 0.5 + 0.5) * 6;
+let farShore = `M0 ${WATER + 1}`;
+for (let x = 0; x <= W; x += 24) farShore += `L${x} ${n(bank(x))}`;
+farShore += `L${W} ${WATER + 1}Z`;
+let farForest = "";
+let farShoreReflection = "";
+for (let x = -10; x < W + 10; ) {
+  if (shoreRand() < 0.8) {
+    const th = 7 + shoreRand() * 13;
+    farShore += pine(x, bank(x) + 2, th).d;
+    farShoreReflection += pine(x, WATER + (WATER - bank(x) - 2) * 0.8, -th * 0.8).d;
+    x += 4 + shoreRand() * 7;
+  } else x += 20 + shoreRand() * 50;
+}
+for (let x = -10; x < W + 10; x += 3 + shoreRand() * 6) {
+  if (shoreRand() < 0.7) farForest += pine(x, bank(x) - 2, 8 + shoreRand() * 10).d;
+}
+
+// The near shore curves into a cove in the middle.
+const cove = (x: number) => Math.exp(-(((x - 1200) / 560) ** 2));
+const shore = (x: number) => 334 + 44 * cove(x) + 3 * Math.sin(x * 0.011);
+
+// Sparkles: small glints that catch the light one at a time, each on its own
+// rhythm, gathering toward the sunlit right.
+const sparkleRand = mulberry32(83);
+const sparkles: { x: number; y: number; size: number; dur: number; delay: number }[] = [];
+while (sparkles.length < 40) {
+  const x = sparkleRand() < 0.3 ? LIGHT_X + (sparkleRand() * 2 - 1) * 220 : 640 + sparkleRand() ** 0.55 * 1450;
+  const y = WATER + 6 + sparkleRand() ** 0.8 * 130;
+  if (y > shore(x) - 5) continue;
+  const dur = 3 + sparkleRand() * 5;
+  sparkles.push({ x, y, size: 6 + ((y - WATER) / 130) * 8 + sparkleRand() * 3, dur, delay: -sparkleRand() * dur });
+}
+
+// The near shore: forest framing the cove (mostly pines, some round leafy
+// trees), a cabin on the left bank, grass, rocks and reeds.
+const CABIN = 930;
+const nearRand = mulberry32(53);
+let ground = `M0 ${n(shore(0))}`;
+for (let x = 16; x <= W; x += 16) ground += `L${x} ${n(shore(x))}`;
+ground += `L${W} ${H}L0 ${H}Z`;
+let groundLit = "";
+for (let x = -20; x < W + 20; ) {
+  const clear = Math.abs(x - CABIN) < 34 || (x > 1310 && x < 1610); // the cabin, the jetty and the fishing spot
+  if (!clear && nearRand() < 0.42 + 0.58 * (1 - cove(x))) {
+    const h = (34 + nearRand() * 76) * (1 - 0.5 * cove(x));
+    const tree = nearRand() < 0.22 ? leafy(x, shore(x) + 3, h * 0.7) : pine(x, shore(x) + 3, h);
+    ground += tree.d;
+    groundLit += tree.lit;
+    x += 6 + nearRand() * 11;
+  } else x += 22 + nearRand() * 40;
+}
+let rocks = "";
+for (let i = 0; i < 12; i++) {
+  const x = 780 + nearRand() * 840;
+  const rx = 5 + nearRand() * 8;
+  const ry = 2.5 + nearRand() * 3;
+  const y = shore(x) + 1;
+  rocks += `M${n(x - rx)} ${n(y)}A${n(rx)} ${n(ry)} 0 0 1 ${n(x + rx)} ${n(y)}Z`;
+}
+let reeds = "";
+for (let i = 0; i < 12; i++) {
+  const x = 760 + nearRand() * 880;
+  if (x > 1320 && x < 1420) continue; // keep the fishing spot open
+  const y = shore(x) + 2;
+  for (let j = 0; j < 4 + Math.floor(nearRand() * 4); j++) {
+    const h = 8 + nearRand() * 14;
+    const lean = (nearRand() - 0.5) * 8;
+    reeds += `M${n(x + j * 2)} ${n(y)}Q${n(x + j * 2 + lean * 0.3)} ${n(y - h * 0.6)} ${n(x + j * 2 + lean)} ${n(y - h)}`;
+  }
+}
+for (let x = 10; x < W; x += 14 + nearRand() * 30) {
+  const y = shore(x) + 1;
+  for (let j = 0; j < 3; j++) reeds += `M${n(x + j * 1.6)} ${n(y)}l${n((j - 1) * 1.5)} ${n(-(3 + nearRand() * 4))}`;
+}
+
+// The cabin: log walls, a roof lit on its sunward side, a chimney (its smoke
+// is animated, global.css) and a warm window.
+const cabinBase = shore(CABIN) + 1;
+const cabin =
+  box(CABIN - 16, cabinBase - 15, CABIN + 16, cabinBase + 2) +
+  `M${CABIN - 20} ${n(cabinBase - 15)}L${CABIN} ${n(cabinBase - 28)}L${CABIN + 20} ${n(cabinBase - 15)}Z` +
+  box(CABIN + 8, cabinBase - 30, CABIN + 12, cabinBase - 21);
+const cabinLit = `M${CABIN} ${n(cabinBase - 28)}L${CABIN + 20} ${n(cabinBase - 15)}L${CABIN} ${n(cabinBase - 15)}Z`;
+const cabinWindow = box(CABIN + 3, cabinBase - 11, CABIN + 10, cabinBase - 5);
+const cabinDoor = box(CABIN - 10, cabinBase - 11, CABIN - 4, cabinBase + 2);
+const smoke = [0, 1, 2].map((k) => ({ x: CABIN + 10, y: cabinBase - 31, size: 12, dur: 7, delay: -k * 2.33 }));
+
+// A jetty out into the water from the right-hand shore, with a lantern, and
+// someone fishing off the end of it.
+const DECK = 354;
+let jetty = box(1390, DECK, 1600, DECK + 3.5);
+let jettyReflection = "";
+for (let x = 1392; x < 1600; x += 24) {
+  jetty += box(x, DECK + 3.5, x + 3, DECK + 14);
+  jettyReflection += box(x, DECK + 14, x + 3, DECK + 22);
+}
+jetty += box(1580, DECK - 12, 1581.5, DECK);
+const FISHER = 1404;
+const fisher =
+  circle(FISHER, DECK - 17.5, 2.3) +
+  box(FISHER - 2.2, DECK - 15, FISHER + 2.2, DECK - 5) +
+  box(FISHER - 2, DECK - 5, FISHER - 0.6, DECK) +
+  box(FISHER + 0.6, DECK - 5, FISHER + 2, DECK);
+// The rod held out over the water, its line slack down to a float on the
+// surface, which sends out rings (global.css).
+const rodTip = { x: FISHER - 38, y: DECK - 30 };
+const float = { x: FISHER - 41, y: DECK + 10 };
+const rod = `M${FISHER - 1} ${DECK - 11}L${rodTip.x} ${rodTip.y}`;
+const fishingLine = `M${rodTip.x} ${rodTip.y}Q${rodTip.x - 6} ${DECK - 2} ${float.x} ${float.y}`;
+const rings = [0, 1].map((k) => ({ x: float.x, y: float.y + 0.8, size: 18, dur: 3.6, delay: -k * 1.8 }));
+
+// A sailboat and its reflection. The mainsail, on the right, faces the sun.
+const boat = { x: 1040, y: WATER + 34 };
+const hull = `M${boat.x - 22} ${boat.y}L${boat.x + 22} ${boat.y}L${boat.x + 16} ${boat.y + 6}L${boat.x - 16} ${boat.y + 6}Z`;
+const sailMain = `M${boat.x + 1} ${boat.y - 2}L${boat.x + 1} ${boat.y - 44}L${boat.x + 19} ${boat.y - 2}Z`;
+const sailJib = `M${boat.x - 1} ${boat.y - 2}L${boat.x - 1} ${boat.y - 37}L${boat.x - 16} ${boat.y - 2}Z`;
+const flip = (y: number) => boat.y + 6 + (boat.y + 6 - y) * 0.75;
+const boatReflection = `M${boat.x + 1} ${n(flip(boat.y - 2))}L${boat.x + 1} ${n(flip(boat.y - 44))}L${boat.x + 19} ${n(flip(boat.y - 2))}Z M${boat.x - 1} ${n(flip(boat.y - 2))}L${boat.x - 1} ${n(flip(boat.y - 37))}L${boat.x - 16} ${n(flip(boat.y - 2))}Z`;
+
+// A pair of ducks paddling about the cove.
+const ducks = [
+  { x: 1150, y: 318, size: 26, dur: 80, delay: -10 },
+  { x: 1186, y: 324, size: 24, dur: 80, delay: -14 },
+];
+
+// Birds: a small flock in a V and two on their own, crossing left to right.
+// Each beats its wings a couple of times, then glides.
+const birdRand = mulberry32(59);
+const flock = [
+  [0, 0],
+  [-16, -7],
+  [-16, 7],
+  [-32, -14],
+  [-32, 14],
+];
+const birds = [
+  ...flock.map(([dx, dy]) => ({ y: 96 + dy, dx, dur: 58, delay: -22 })),
+  { y: 70, dx: 0, dur: 44, delay: -8 },
+  { y: 132, dx: 0, dur: 66, delay: -40 },
+].map((b) => ({ ...b, size: 13 + birdRand() * 4, flap: 1.6 + birdRand() * 0.9, flapDelay: -birdRand() * 2, bob: 2.4 + birdRand() * 1.6 }));
+
+// Inline position and timing for an element placed at a point in the scene.
+const point = (x: number, y: number, size: number, dur: number, delay: number) =>
+  `--x: ${n(x)}; --y: ${n(y)}; --size: ${n(size)}; animation-duration: ${dur.toFixed(2)}s; animation-delay: ${delay.toFixed(2)}s`;
+
+const view = `0 0 ${W} ${H}`;
+const fit = "xMidYMax slice";
+---
+
+<div class="landscape" aria-hidden="true">
+  <!-- Night: a city skyline. The buildings rise in, then the lights come on. -->
+  <div class="landscape-scene landscape-night">
+    <div class="landscape-glow"></div>
+    {
+      cityLayers.map((layer, i) => (
+        <>
+          <svg viewBox={view} preserveAspectRatio={fit} class="landscape-layer reveal" data-delay={`${i * 140}`}>
+            <path d={layer.body} class={CITY_CLASSES[i]} />
+            {i === 2 && <path d={street} class="city-2" />}
+            {layer.lattice && <path d={layer.lattice} class="city-lattice" />}
+            {layer.strips && <path d={layer.strips} class="city-strips" />}
+            {layer.crowns && <path d={layer.crowns} class="city-crown" />}
+            {layer.signs.map((s) => (
+              <path d={s.d} fill={s.color} class="city-sign" />
+            ))}
+          </svg>
+          {i < 2 && <div class={i === 0 ? "landscape-haze" : "landscape-haze landscape-haze-near"} />}
+        </>
+      ))
+    }
+    <div class="landscape-lights reveal" data-reveal="lights" data-delay="1300">
+      <svg viewBox={view} preserveAspectRatio={fit}>
+        {steady.map((tones, i) => tones.map((d, k) => d && <path d={d} fill={WINDOW_COLORS[k]} class={WINDOW_CLASSES[i]} />))}
+        <path d={lamps} class="city-lamp" />
+      </svg>
+      {
+        twinkle.map((layers, g) => (
+          <svg viewBox={view} preserveAspectRatio={fit} class={`anim ${TWINKLE_CLASSES[g]}`}>
+            {layers.map((tones, i) => tones.map((d, k) => d && <path d={d} fill={WINDOW_COLORS[k]} class={WINDOW_CLASSES[i]} />))}
+          </svg>
+        ))
+      }
+      {beacons.map((b) => <span class="anim land-point beacon" style={point(b.x, b.y, b.size, b.dur, b.delay)} />)}
+      <span class="anim land-point wheel" style={`--x: ${WHEEL.x}; --y: ${WHEEL.y}; --size: 112; ${wheelImage}`} />
+      {cars.map((c) => <span class={c.lane === "toward" ? "anim car car-toward" : "anim car car-away"} style={`animation-duration: ${c.dur}s; animation-delay: ${c.delay}s`} />)}
+      <span class="anim train" style={`--y: ${RAIL}; ${trainImage}`} />
+      <span class="anim plane" style="--y: 62"><i class="anim"></i></span>
+    </div>
+  </div>
+
+  <!-- Day: a lake among mountains, lit by the sun above to the right. -->
+  <div class="landscape-scene landscape-day">
+    <div class="landscape-glow"></div>
+    <svg viewBox={view} preserveAspectRatio={fit} class="landscape-layer reveal">
+      <defs>
+        <linearGradient id="land-water" gradientUnits="userSpaceOnUse" x1="0" y1={WATER} x2="0" y2={H}>
+          <stop offset="0" stop-color="#cfe6ec" />
+          <stop offset="1" stop-color="#6fa8c4" />
+        </linearGradient>
+        <linearGradient id="land-water-light" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={W} y2="0">
+          <stop offset="0.45" stop-color="#fff2dc" stop-opacity="0" />
+          <stop offset="0.75" stop-color="#fff2dc" stop-opacity="0.25" />
+          <stop offset="1" stop-color="#fff2dc" stop-opacity="0.12" />
+        </linearGradient>
+        <filter id="land-soften" x="-5%" y="-10%" width="110%" height="120%">
+          <feGaussianBlur stdDeviation="4" />
+        </filter>
+        <linearGradient id="land-shade-far" gradientUnits="userSpaceOnUse" x1="0" y1="40" x2="0" y2={WATER}>
+          <stop offset="0" stop-color="#8f9cbc" stop-opacity="0.55" />
+          <stop offset="0.6" stop-color="#8f9cbc" stop-opacity="0.22" />
+          <stop offset="1" stop-color="#8f9cbc" stop-opacity="0" />
+        </linearGradient>
+        <linearGradient id="land-shade-mid" gradientUnits="userSpaceOnUse" x1="0" y1="120" x2="0" y2={WATER}>
+          <stop offset="0" stop-color="#5d7f5a" stop-opacity="0.55" />
+          <stop offset="1" stop-color="#5d7f5a" stop-opacity="0" />
+        </linearGradient>
+        <linearGradient id="land-reflect-far" gradientUnits="userSpaceOnUse" x1="0" y1={WATER} x2="0" y2={WATER + 120}>
+          <stop offset="0" stop-color="#c4cadb" stop-opacity="0.6" />
+          <stop offset="1" stop-color="#c4cadb" stop-opacity="0" />
+        </linearGradient>
+        <linearGradient id="land-reflect-mid" gradientUnits="userSpaceOnUse" x1="0" y1={WATER} x2="0" y2={WATER + 90}>
+          <stop offset="0" stop-color="#7f9f76" stop-opacity="0.55" />
+          <stop offset="1" stop-color="#7f9f76" stop-opacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={`${line(far)}L${W} ${WATER + 1}L0 ${WATER + 1}Z`} class="nature-0" />
+      <path d={farRelief.shade} fill="url(#land-shade-far)" filter="url(#land-soften)" />
+      <path d={farRelief.cap} class="nature-snow" />
+      <path d={farRelief.capShade} class="nature-snow-shade" />
+      <path d={farRelief.rim} class="nature-rim" />
+      <path d={`${line(mid)}L${W} ${WATER + 1}L0 ${WATER + 1}Z`} class="nature-1" />
+      <path d={midRelief.shade} fill="url(#land-shade-mid)" filter="url(#land-soften)" />
+      <path d={midRelief.rim} class="nature-rim" />
+      <rect x="0" y={WATER} width={W} height={H - WATER} fill="url(#land-water)" />
+      <path d={`${line(mirrored(far))}L${W} ${WATER}L0 ${WATER}Z`} fill="url(#land-reflect-far)" />
+      <path d={`${line(mirrored(mid))}L${W} ${WATER}L0 ${WATER}Z`} fill="url(#land-reflect-mid)" />
+      <rect x="0" y={WATER} width={W} height={H - WATER} fill="url(#land-water-light)" />
+      <path d={farShoreReflection} class="nature-shore nature-reflection" />
+      <path d={farForest} class="nature-forest" />
+      <path d={farShore} class="nature-shore" />
+    </svg>
+    <div class="landscape-lights reveal" data-reveal="lights" data-delay="700">
+      {sparkles.map((s) => <span class="anim land-point sparkle" style={point(s.x, s.y, s.size, s.dur, s.delay)} />)}
+      <svg viewBox={view} preserveAspectRatio={fit} class="anim boat">
+        <path d={boatReflection} class="nature-sail nature-reflection" />
+        <path d={hull} class="nature-hull" />
+        <path d={sailMain} class="nature-sail" />
+        <path d={sailJib} class="nature-sail nature-sail-jib" />
+      </svg>
+      {ducks.map((d) => <span class="anim land-point duck" style={point(d.x, d.y, d.size, d.dur, d.delay)} />)}
+      {rings.map((r) => <span class="anim land-point ripple" style={point(r.x, r.y, r.size, r.dur, r.delay)} />)}
+      {
+        birds.map((b) => (
+          <span class="anim bird" style={`--y: ${n(b.y)}; --dx: ${b.dx}; --size: ${n(b.size)}; animation-duration: ${b.dur}s; animation-delay: ${b.delay}s`}>
+            <span class="anim bird-bob" style={`animation-duration: ${b.bob.toFixed(2)}s`}>
+              <i class="anim bird-up" style={`animation-duration: ${b.flap.toFixed(2)}s; animation-delay: ${b.flapDelay.toFixed(2)}s`} />
+              <i class="anim bird-down" style={`animation-duration: ${b.flap.toFixed(2)}s; animation-delay: ${b.flapDelay.toFixed(2)}s`} />
+            </span>
+          </span>
+        ))
+      }
+    </div>
+    <svg viewBox={view} preserveAspectRatio={fit} class="landscape-layer reveal" data-delay="200">
+      <path d={jettyReflection} class="nature-dock nature-reflection" />
+      <path d={ground} class="nature-3" />
+      <path d={groundLit} class="nature-lit" />
+      <path d={cabin} class="nature-wood" />
+      <path d={cabinLit} class="nature-wood-lit" />
+      <path d={cabinDoor} class="nature-dock" />
+      <circle cx={CABIN + 6.5} cy={n(cabinBase - 8)} r="7" fill="#ffd27a" opacity="0.3" />
+      <path d={cabinWindow} fill="#ffdc8f" />
+      <path d={rocks} class="nature-rock" />
+      <path d={reeds} class="nature-reeds" />
+      <path d={jetty} class="nature-dock" />
+      <path d={fisher} class="nature-dock" />
+      <path d={rod} class="nature-rod" />
+      <path d={fishingLine} class="nature-line" />
+      <path d={`M${float.x - 1.8} ${float.y}a1.8 1.8 0 0 1 3.6 0Z`} fill="#fff3e6" />
+      <path d={`M${float.x - 1.8} ${float.y}a1.8 1.2 0 0 0 3.6 0Z`} fill="#d9472b" />
+      <circle cx="1580.7" cy={DECK - 13} r="6" fill="#ffd27a" opacity="0.35" />
+      <circle cx="1580.7" cy={DECK - 13} r="2" fill="#fff1c4" />
+    </svg>
+    <div class="landscape-lights reveal" data-reveal="lights" data-delay="900">
+      {smoke.map((s) => <span class="anim land-point smoke" style={point(s.x, s.y, s.size, s.dur, s.delay)} />)}
+    </div>
+  </div>
+</div>

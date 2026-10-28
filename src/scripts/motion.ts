@@ -44,6 +44,20 @@ if (reduceMotion || !("IntersectionObserver" in window)) {
   reveals.forEach((el) => io.observe(el));
 }
 
+// ---- Landscape -----------------------------------------------------------------
+// The footer landscape's lights, traffic and water only move while it's on
+// screen (the CSS pauses them otherwise).
+const landscape = document.querySelector<HTMLElement>(".landscape");
+if (landscape) {
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(([entry]) => landscape.classList.toggle("is-live", entry.isIntersecting), {
+      rootMargin: "120px 0px",
+    }).observe(landscape);
+  } else {
+    landscape.classList.add("is-live");
+  }
+}
+
 // ---- Hero word rotator -------------------------------------------------------
 document.querySelectorAll<HTMLElement>("[data-rotator]").forEach((rotator) => {
   const words = Array.from(rotator.querySelectorAll<HTMLElement>(".rotator-word"));

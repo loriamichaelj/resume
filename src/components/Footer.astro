@@ -1,11 +1,14 @@
 ---
 import { profile, nav } from "../data/site";
+import Landscape from "./Landscape.astro";
 const year = 2027;
 ---
 
-<footer class="border-t border-white/5 py-10">
+<!-- The footer is the ground the landscape above it stands on. -->
+<footer class="site-footer relative py-10">
+  <Landscape />
   <div class="container-px flex flex-col items-center justify-between gap-6 sm:flex-row">
-    <p class="text-sm text-white/45">
+    <p class="footer-text text-sm">
       © {year} {profile.name}. All rights reserved.
     </p>
 
@@ -15,7 +18,7 @@ const year = 2027;
           <li>
             <a
               href={item.href}
-              class="text-sm text-white/50 transition-colors hover:text-white"
+              class="footer-text footer-link text-sm transition-colors"
             >
               {item.label}
             </a>
