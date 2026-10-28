@@ -7,8 +7,8 @@ import * as THREE from "three";
 // lights or ornaments. Sizes are in the cloud's local units (the cloud is ~2 wide).
 //
 // Each saucer has health. Lightning hits (see cloud.ts) flash and jolt it,
-// and damage builds up visibly: soot marks, a dimming band and a
-// trail that turns to fire. At zero it explodes, spirals down
+// and damage shows in how it flies (listing and limping), its lights shorting
+// out and its trail turning to fire; the hull itself stays clean. At zero it explodes, spirals down
 // and disappears, then warps back in a little later.
 
 const HULL_R = 0.15;
@@ -31,12 +31,11 @@ const litVertex = /* glsl */ `
 `;
 
 // Cartoon hull: three flat light bands, a lavender top over a darker belly and a
-// hard white highlight. Nothing is drawn on it but soot as it takes damage.
+// hard white highlight. Nothing is drawn on it, damaged or not.
 const hullFragment = /* glsl */ `
   uniform vec3 uAccent;
   uniform float uOpacity;
   uniform float uTime;
-  uniform float uDamage; // 0 healthy .. 1 nearly destroyed
   uniform float uHit; // white flash when struck
   varying vec3 vNormal;
   varying vec3 vView;
@@ -57,9 +56,6 @@ const hullFragment = /* glsl */ `
     // A hard white sticker highlight.
     float spec = step(0.55, pow(max(dot(reflect(-L, n), v), 0.0), 12.0));
     col = mix(col, vec3(1.0), spec * 0.75 * top);
-    // Soot blotches spread as damage builds.
-    float burn = step(0.62, sin(vLocal.x * 41.0) * sin(vLocal.z * 37.0) * 0.5 + 0.5 + uDamage * 0.4);
-    col = mix(col, vec3(0.16, 0.13, 0.16), burn * min(1.0, uDamage * 1.4));
     col = mix(col, vec3(1.0, 0.97, 0.92), uHit * 0.85);
     gl_FragColor = vec4(col, uOpacity);
   }
@@ -223,7 +219,7 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
   ship.add(craft);
   craft.add(spinner);
 
-  const hullMat = lit(hullFragment, { uTime: { value: 0 }, uDamage: { value: 0 }, uHit: { value: 0 } });
+  const hullMat = lit(hullFragment, { uTime: { value: 0 }, uHit: { value: 0 } });
   const profile = [
     [0.0, -0.05],
     [0.05, -0.054],
@@ -443,7 +439,6 @@ export function createUfo(color: string, glow: THREE.Texture, phase: number) {
     const damage = 1 - Math.max(health, 0) / MAX_HEALTH;
     hitFlash = Math.max(0, hitFlash - dt * 6);
     jolt = Math.max(0, jolt - dt * 2.5);
-    hullMat.uniforms.uDamage.value = damage;
     hullMat.uniforms.uHit.value = hitFlash;
     // Knocked about when struck; limping and listing as damage builds.
     craft.rotation.x += Math.sin(time * 26) * 0.35 * jolt + Math.sin(time * 7 + phase) * 0.08 * damage;
