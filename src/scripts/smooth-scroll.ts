@@ -2,21 +2,26 @@ import Lenis from "lenis";
 import "lenis/dist/lenis.css";
 import { onFrame } from "./ticker";
 
-// Inertial smooth scrolling for wheel and trackpad (touch stays native).
-// Driven from the shared ticker, so the page, the DOM motion and the 3D scene
-// all see the same scroll position every frame. Off under reduced motion.
+// Inertial smooth scrolling for wheel and trackpad. Driven from the shared
+// ticker, so the page, the DOM motion and the 3D scene all see the same scroll
+// position every frame. Off under reduced motion, and never created on touch
+// screens: Lenis leaves touch scrolling native, but it still registers
+// non-passive touchstart/touchmove listeners on the window, which make iOS wait
+// for the main thread before every step of a scroll and so make it choppy.
 
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const finePointer = matchMedia("(hover: hover) and (pointer: fine)").matches;
 const NAV_OFFSET = 88; // clears the fixed nav
 
-export const lenis = reduceMotion
-  ? null
-  : new Lenis({
-      autoRaf: false,
-      lerp: 0.085,
-      wheelMultiplier: 1,
-      stopInertiaOnNavigate: true,
-    });
+export const lenis =
+  reduceMotion || !finePointer
+    ? null
+    : new Lenis({
+        autoRaf: false,
+        lerp: 0.085,
+        wheelMultiplier: 1,
+        stopInertiaOnNavigate: true,
+      });
 
 if (lenis) onFrame((time) => lenis.raf(time), -10);
 
@@ -44,7 +49,7 @@ document.addEventListener("click", (e) => {
   e.preventDefault();
   const y = Math.max(0, scrollTarget(section));
   if (lenis) lenis.scrollTo(y, { duration: 1.4 });
-  else window.scrollTo({ top: y, behavior: "auto" });
+  else window.scrollTo({ top: y, behavior: reduceMotion ? "auto" : "smooth" });
   // Keep the address bar clean: no #about etc. (also clears a hash the visitor arrived with).
   history.replaceState(null, "", location.pathname + location.search);
 });

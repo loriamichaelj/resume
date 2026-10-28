@@ -89,7 +89,7 @@ const {
     <!-- Soft light that trails the cursor (desktop only, set by motion.ts) -->
     <div
       id="cursor-glow"
-      class="pointer-events-none fixed left-0 top-0 -z-[1] h-[34rem] w-[34rem] rounded-full opacity-0 transition-opacity duration-700"
+      class="pointer-events-none fixed left-0 top-0 -z-[1] hidden h-[34rem] w-[34rem] rounded-full opacity-0 transition-opacity duration-700 [@media(hover:hover)_and_(pointer:fine)]:block"
       style="background: radial-gradient(circle, rgb(var(--c-spot) / 0.12), transparent 70%)"
       aria-hidden="true"
     >
