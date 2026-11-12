@@ -244,7 +244,7 @@ export function createWorld(canvas: HTMLCanvasElement, quality: Quality) {
     camera.updateMatrixWorld();
 
     // Light the cloud from the sun or moon. Keep the light in front of the
-    // cloud (the bodies sit far behind it) and from above, so its face stays
+    // cloud (the bodies sit far behind it) and from above, so its front stays
     // lit, and ease toward it as things move.
     sky.update(time, dt, camera);
     sky.lightPosition(lightDir).sub(cloud.object.position);

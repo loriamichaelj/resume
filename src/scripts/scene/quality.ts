@@ -24,7 +24,7 @@ export const LEVELS: Rung[] = [
 // Phones and tablets have dense screens (2-3x) and GPUs that draw the cheap
 // layers well but struggle with the cloud's ray march. So the cloud stays at
 // about half the CSS resolution (it is soft, and upscales smoothly) while the
-// canvas goes up to 1.5x: crisp saucers, face and lines. (2x costs about three
+// canvas goes up to 1.5x: crisp saucers and lines. (2x costs about three
 // times as much GPU time again, too much to keep scrolling smooth.)
 export const TOUCH_LEVELS: Rung[] = [
   { ratio: 0.75, cloud: 0.5 },
